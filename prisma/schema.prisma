@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Inspection {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  location    String
+  technician  String
+  notes       String?
+  status      String   @default("pending")
+  syncStatus  String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  risers      Riser[]
+  transcriptions Transcription[]
+  
+  @@map("inspections")
+}
+
+model Riser {
+  id                   Int      @id @default(autoincrement())
+  inspectionId         String
+  riserNumber          Int
+  staticPressure       Float?
+  residualPressure     Float?
+  controlValveStatus   String?
+  butterflyValveStatus String?
+  corrosion            String?
+  
+  inspection           Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  gaugeReadings        GaugeReading[]
+  
+  @@map("risers")
+}
+
+model GaugeReading {
+  id         Int      @id @default(autoincrement())
+  riserId    Int
+  type       String
+  pressure   Float
+  unit       String   @default("psi")
+  timestamp  DateTime @default(now())
+  
+  riser      Riser @relation(fields: [riserId], references: [id], onDelete: Cascade)
+  
+  @@map("gauge_readings")
+}
+
+model Transcription {
+  id           String   @id @default(cuid())
+  audioFile    String
+  transcription String
+  timestamp    DateTime @default(now())
+  processed    Boolean  @default(false)
+  syncStatus   String   @default("pending")
+  inspectionId String?
+  
+  inspection   Inspection? @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  
+  @@map("transcriptions")
+}
+
+model Job {
+  id            String   @id @default(cuid())
+  title         String
+  location      String
+  scheduledDate DateTime
+  status        String   @default("scheduled")
+  technician    String?
+  notes         String?
+  syncStatus    String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("jobs")
+}
