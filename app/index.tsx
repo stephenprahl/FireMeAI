@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AIAgentService } from '../services/aiAgentService';
 import { DatabaseService } from '../services/databaseService';
 import { LangGraphAgentService } from '../services/langGraphAgentService';
@@ -241,7 +241,96 @@ export default function Index() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'home':
-        return null; // Home content is now in the main render
+        return (
+          <View style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+              <View style={styles.dashboardSection}>
+                <Text style={styles.sectionTitle}>Dashboard</Text>
+                <View style={styles.metricsGrid}>
+                  <View style={styles.metricCard}>
+                    <View style={styles.metricIcon}>
+                      <Ionicons name="document-text" size={24} color="#2563eb" />
+                    </View>
+                    <View style={styles.metricContent}>
+                      <Text style={styles.metricValue}>{inspectionCount}</Text>
+                      <Text style={styles.metricLabel}>Inspections</Text>
+                    </View>
+                  </View>
+                  <View style={styles.metricCard}>
+                    <View style={styles.metricIcon}>
+                      <Ionicons name="cloud-done" size={24} color="#059669" />
+                    </View>
+                    <View style={styles.metricContent}>
+                      <Text style={styles.metricValue}>{syncStatus.isOnline ? 'Online' : 'Offline'}</Text>
+                      <Text style={styles.metricLabel}>Sync Status</Text>
+                    </View>
+                  </View>
+                  <View style={styles.metricCard}>
+                    <View style={styles.metricIcon}>
+                      <Ionicons name="cloud-upload" size={24} color="#f59e42" />
+                    </View>
+                    <View style={styles.metricContent}>
+                      <Text style={styles.metricValue}>{syncStatus.pendingCount}</Text>
+                      <Text style={styles.metricLabel}>Pending Sync</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Recent Inspection</Text>
+                  {inspection && (
+                    <View style={[styles.statusCard, complianceStatus === 'compliant' ? styles.statusCompliant : complianceStatus === 'non_compliant' ? styles.statusNonCompliant : styles.statusWarning]}>
+                      <View style={styles.statusIcon}>
+                        <Ionicons name={complianceStatus === 'compliant' ? 'checkmark-circle' : complianceStatus === 'non_compliant' ? 'close-circle' : 'alert-circle'} size={32} color={complianceStatus === 'compliant' ? '#059669' : complianceStatus === 'non_compliant' ? '#dc2626' : '#f59e42'} />
+                      </View>
+                      <View style={styles.statusContent}>
+                        <Text style={styles.statusTitle}>{complianceStatus === 'compliant' ? 'Compliant' : complianceStatus === 'non_compliant' ? 'Non-Compliant' : 'Requires Attention'}</Text>
+                        <Text style={styles.statusSubtitle}>{inspection?.location || 'No location'}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+                {inspection ? (
+                  <View style={styles.riserCard}>
+                    <Text style={styles.riserTitle}>Technician: {inspection.technician}</Text>
+                    <Text style={styles.riserDetail}>Location: {inspection.location}</Text>
+                    <Text style={styles.riserDetail}>Date: {inspection.timestamp ? new Date(inspection.timestamp).toLocaleDateString() : 'N/A'}</Text>
+                    {/* System type not present in NFPAInspection, so omit or add custom logic if needed */}
+                    {missingFields.length > 0 && (
+                      <View>
+                        <Text style={styles.sectionTitle}>Missing Fields</Text>
+                        {missingFields.map((field, idx) => (
+                          <Text key={idx} style={styles.missingField}>{field}</Text>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={styles.riserDetail}>No recent inspection data available.</Text>
+                )}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Quick Actions</Text>
+                <View style={styles.actionGrid}>
+                  <Pressable style={styles.primaryAction} onPress={handleGeneratePDF} disabled={!inspection || isGeneratingPDF}>
+                    <View style={styles.actionIcon}>
+                      <Ionicons name="document" size={28} color="white" />
+                    </View>
+                    <Text style={styles.primaryActionText}>Generate PDF</Text>
+                    <Text style={styles.primaryActionSubtext}>Create NFPA inspection report</Text>
+                  </Pressable>
+                  <Pressable style={styles.sampleButton} onPress={handleGenerateSamplePDF} disabled={isGeneratingPDF}>
+                    <Ionicons name="document-outline" size={28} color="white" />
+                    <Text style={styles.primaryActionText}>Sample PDF</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        );
 
       case 'camera':
         return (
@@ -329,15 +418,6 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.professionalHeader}>
-        <View style={styles.headerContent}>
-          <View style={styles.companyInfo}>
-            <Text style={styles.companyName}>Voice Inspector AI</Text>
-            <Text style={styles.companyTagline}>Field inspection assistant</Text>
-          </View>
-        </View>
-      </View>
-
       <View style={styles.content}>
         {renderTabContent()}
       </View>
@@ -387,6 +467,17 @@ export default function Index() {
   );
 }
 const styles = StyleSheet.create({
+  headerLogoWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: 8,
+  },
+  headerTextWrap: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',

@@ -29,7 +29,7 @@ export class SyncService {
   private handleConnectionChange(online: boolean): void {
     this.isOnline = online;
     console.log(`Network status: ${online ? 'online' : 'offline'}`);
-    
+
     if (online) {
       this.retryAttempts = 0;
       this.syncPendingData();
@@ -51,11 +51,21 @@ export class SyncService {
       return;
     }
 
+    // Ensure database is initialized before syncing
+    if (!this.databaseService["db"] || !this.databaseService["isInitialized"]) {
+      try {
+        await this.databaseService.initializeDatabase();
+        console.log('Database was not initialized, now initialized for sync.');
+      } catch (initError) {
+        console.error('Failed to initialize database before sync:', initError);
+        return;
+      }
+    }
+
     try {
       console.log('Starting sync of pending data...');
-      
       const unsyncedData = await this.databaseService.getUnsyncedData();
-      
+
       // Sync inspections
       for (const inspection of unsyncedData.inspections) {
         await this.syncInspection(inspection);
@@ -126,10 +136,10 @@ export class SyncService {
     // Mock implementation for MVP
     // In production, this would be your actual API endpoint
     console.log(`Mock sending to ${url}:`, options.body);
-    
+
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Simulate successful response 90% of the time
     if (Math.random() > 0.1) {
       return {
@@ -145,7 +155,7 @@ export class SyncService {
 
   private handleSyncError(error: any): void {
     this.retryAttempts++;
-    
+
     if (this.retryAttempts < this.maxRetries) {
       console.log(`Retrying sync (${this.retryAttempts}/${this.maxRetries})...`);
       setTimeout(() => this.syncPendingData(), 5000 * this.retryAttempts);
@@ -169,7 +179,7 @@ export class SyncService {
     lastSyncTime: Date | null;
   }> {
     const unsyncedData = await this.databaseService.getUnsyncedData();
-    
+
     return {
       isOnline: this.isOnline,
       pendingInspections: unsyncedData.inspections.length,
