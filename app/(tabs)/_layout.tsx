@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface TabBarProps {
     activeTab: string;
@@ -38,7 +38,7 @@ export default function TabLayout({ activeTab, onTabPress }: TabBarProps) {
     return (
         <View style={styles.container}>
             {tabs.map((tab) => (
-                <TouchableOpacity
+                <Pressable
                     key={tab.id}
                     style={[
                         styles.tabItem,
@@ -57,7 +57,7 @@ export default function TabLayout({ activeTab, onTabPress }: TabBarProps) {
                     ]}>
                         {tab.title}
                     </Text>
-                </TouchableOpacity>
+                </Pressable>
             ))}
         </View>
     );

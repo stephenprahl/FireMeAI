@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CameraGaugeReader from '../components/CameraGaugeReader';
 import ClientManagementComponent from '../components/ClientManagementComponent';
@@ -114,146 +114,123 @@ export default function Index() {
     switch (activeTab) {
       case 'home':
         return (
-          <ScrollView style={{ flex: 1, backgroundColor: '#f8fafc' }} contentContainerStyle={{ paddingBottom: 100 }}>
-            {/* Professional Header */}
-            <View style={styles.professionalHeader}>
-              <View style={styles.headerContent}>
-                <View style={styles.companyInfo}>
-                  <Ionicons name="business" size={32} color="#2563eb" />
-                  <View style={styles.companyText}>
-                    <Text style={styles.companyName}>FireMe Pro</Text>
-                    <Text style={styles.companyTagline}>NFPA Inspection Management</Text>
+          <ScrollView style={{ flex: 1, backgroundColor: '#ffffff' }} contentContainerStyle={{ paddingBottom: 100 }}>
+            <View style={styles.safeAreaContent}>
+              {/* AI Header */}
+              <View style={styles.aiHeader}>
+                <View style={styles.headerContent}>
+                  <View style={styles.companyInfo}>
+                    <View style={styles.aiLogoContainer}>
+                      <Ionicons name="sparkles" size={24} color="#2563eb" />
+                    </View>
+                    <View style={styles.companyText}>
+                      <Text style={styles.companyName}>FireMe AI</Text>
+                      <Text style={styles.companyTagline}>AI-Powered Fire Safety</Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.headerActions}>
-                  <TouchableOpacity style={styles.headerButton}>
-                    <Ionicons name="settings" size={24} color="#64748b" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            {/* Welcome Section */}
-            <View style={styles.welcomeSection}>
-              <Text style={styles.welcomeTitle}>Welcome back</Text>
-              <Text style={styles.welcomeSubtitle}>Ready to conduct your next inspection?</Text>
-            </View>
-
-            {/* Key Metrics */}
-            <View style={styles.metricsSection}>
-              <Text style={styles.sectionTitle}>Key Metrics</Text>
-              <View style={styles.metricsGrid}>
-                <View style={styles.metricCard}>
-                  <View style={styles.metricIcon}>
-                    <Ionicons name="document-text" size={28} color="#2563eb" />
-                  </View>
-                  <View style={styles.metricContent}>
-                    <Text style={styles.metricValue}>{inspectionCount}</Text>
-                    <Text style={styles.metricLabel}>Total Inspections</Text>
-                  </View>
-                </View>
-                <View style={styles.metricCard}>
-                  <View style={styles.metricIcon}>
-                    <Ionicons name={syncStatus.isOnline ? "cloud-done" : "cloud-offline"} size={28} color={syncStatus.isOnline ? "#059669" : "#dc2626"} />
-                  </View>
-                  <View style={styles.metricContent}>
-                    <Text style={styles.metricValue}>{syncStatus.isOnline ? 'Online' : 'Offline'}</Text>
-                    <Text style={styles.metricLabel}>Sync Status</Text>
-                  </View>
-                </View>
-                <View style={styles.metricCard}>
-                  <View style={styles.metricIcon}>
-                    <Ionicons name="time" size={28} color="#f59e42" />
-                  </View>
-                  <View style={styles.metricContent}>
-                    <Text style={styles.metricValue}>{syncStatus.pendingCount}</Text>
-                    <Text style={styles.metricLabel}>Pending Sync</Text>
-                  </View>
-                </View>
-                <View style={styles.metricCard}>
-                  <View style={styles.metricIcon}>
-                    <Ionicons name="checkmark-circle" size={28} color="#059669" />
-                  </View>
-                  <View style={styles.metricContent}>
-                    <Text style={styles.metricValue}>{complianceStatus === 'compliant' ? 'Good' : complianceStatus === 'non_compliant' ? 'Issues' : 'Check'}</Text>
-                    <Text style={styles.metricLabel}>Compliance</Text>
-                  </View>
+                  <Pressable style={styles.aiSettingsButton}>
+                    <Ionicons name="settings-outline" size={20} color="#64748b" />
+                  </Pressable>
                 </View>
               </View>
-            </View>
 
-            {/* Quick Actions */}
-            <View style={styles.actionsSection}>
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
-              <View style={styles.actionGrid}>
-                <TouchableOpacity style={styles.primaryAction} onPress={() => setActiveTab('camera')}>
-                  <View style={styles.actionIcon}>
-                    <Ionicons name="camera" size={28} color="white" />
-                  </View>
-                  <Text style={styles.primaryActionText}>Start Inspection</Text>
-                  <Text style={styles.primaryActionSubtext}>Use camera for gauge reading</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.secondaryAction} onPress={() => setActiveTab('schedule')}>
-                  <Ionicons name="calendar" size={24} color="#2563eb" />
-                  <Text style={styles.secondaryActionText}>Schedule</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.secondaryAction} onPress={() => setActiveTab('clients')}>
-                  <Ionicons name="people" size={24} color="#2563eb" />
-                  <Text style={styles.secondaryActionText}>Clients</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.secondaryAction} onPress={handleGeneratePDF} disabled={!inspection}>
-                  <Ionicons name="document" size={24} color="#2563eb" />
-                  <Text style={styles.secondaryActionText}>Generate PDF</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Recent Activity */}
-            {inspection && (
-              <View style={styles.activitySection}>
-                <Text style={styles.sectionTitle}>Recent Activity</Text>
-                <View style={styles.activityItem}>
-                  <View style={styles.activityIcon}>
-                    <Ionicons name="document-text" size={20} color="#2563eb" />
-                  </View>
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>Inspection Completed</Text>
-                    <Text style={styles.activitySubtitle}>{inspection.location} - {new Date(inspection.timestamp || Date.now()).toLocaleDateString()}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.activityAction}>
-                    <Text style={styles.activityActionText}>View</Text>
-                  </TouchableOpacity>
+              {/* AI Status */}
+              <View style={styles.aiStatusOverview}>
+                <View style={styles.aiStatusItem}>
+                  <View style={styles.aiStatusIndicator} />
+                  <Text style={styles.aiStatusText}>AI Assistant Active</Text>
+                </View>
+                <View style={styles.aiStatusItem}>
+                  <Text style={styles.aiStatusValue}>{inspectionCount}</Text>
+                  <Text style={styles.aiStatusLabel}>AI Inspections</Text>
                 </View>
               </View>
-            )}
+
+              {/* Quick Actions */}
+              <View style={styles.quickActionsSection}>
+                <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+                <View style={styles.quickActionsGrid}>
+                  <Pressable style={styles.quickActionButton} onPress={() => setActiveTab('camera')}>
+                    <View style={styles.quickActionIcon}>
+                      <Ionicons name="camera" size={22} color="#2563eb" />
+                    </View>
+                    <Text style={styles.quickActionText}>New Inspection</Text>
+                    <Text style={styles.quickActionSubtext}>Start AI analysis</Text>
+                  </Pressable>
+                  <Pressable style={styles.quickActionButton} onPress={() => setActiveTab('schedule')}>
+                    <View style={styles.quickActionIcon}>
+                      <Ionicons name="calendar" size={22} color="#2563eb" />
+                    </View>
+                    <Text style={styles.quickActionText}>Schedule</Text>
+                    <Text style={styles.quickActionSubtext}>Manage jobs</Text>
+                  </Pressable>
+                  <Pressable style={styles.quickActionButton} onPress={() => setActiveTab('clients')}>
+                    <View style={styles.quickActionIcon}>
+                      <Ionicons name="people" size={22} color="#2563eb" />
+                    </View>
+                    <Text style={styles.quickActionText}>Clients</Text>
+                    <Text style={styles.quickActionSubtext}>View records</Text>
+                  </Pressable>
+                  <Pressable style={styles.quickActionButton} onPress={handleGeneratePDF} disabled={!inspection}>
+                    <View style={styles.quickActionIcon}>
+                      <Ionicons name="document-text" size={22} color="#2563eb" />
+                    </View>
+                    <Text style={styles.quickActionText}>Reports</Text>
+                    <Text style={styles.quickActionSubtext}>Generate PDF</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Recent Activity */}
+              {inspection && (
+                <View style={styles.recentActivitySection}>
+                  <Text style={styles.recentActivityTitle}>Recent AI Analysis</Text>
+                  <View style={styles.recentActivityCard}>
+                    <View style={styles.recentActivityHeader}>
+                      <Ionicons name="sparkles" size={16} color="#2563eb" />
+                      <Text style={styles.recentActivityLocation}>{inspection.location}</Text>
+                    </View>
+                    <Text style={styles.recentActivityDate}>
+                      AI analyzed on {new Date(inspection.timestamp || Date.now()).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
           </ScrollView>
         );
 
       case 'camera':
         return (
-          <CameraGaugeReader
-            onGaugeRead={handleGaugeRead}
-            onClose={() => setActiveTab('home')}
-          />
+          <View style={{ flex: 1, paddingBottom: 80 }}>
+            <CameraGaugeReader
+              onGaugeRead={handleGaugeRead}
+              onClose={() => setActiveTab('home')}
+            />
+          </View>
         );
 
       case 'schedule':
         return (
-          <SchedulingComponent
-            isVisible={true}
-            onClose={() => setActiveTab('home')}
-            onJobCreated={handleJobCreated}
-            useModal={false}
-          />
+          <View style={{ flex: 1, paddingBottom: 80 }}>
+            <SchedulingComponent
+              isVisible={true}
+              onClose={() => setActiveTab('home')}
+              onJobCreated={handleJobCreated}
+              useModal={false}
+            />
+          </View>
         );
 
       case 'clients':
         return (
-          <ClientManagementComponent
-            isVisible={true}
-            onClose={() => setActiveTab('home')}
-            useModal={false}
-          />
+          <View style={{ flex: 1, paddingBottom: 80 }}>
+            <ClientManagementComponent
+              isVisible={true}
+              onClose={() => setActiveTab('home')}
+              useModal={false}
+            />
+          </View>
         );
 
       default:
@@ -267,38 +244,40 @@ export default function Index() {
         {renderTabContent()}
       </View>
 
-      <View style={[styles.professionalTabBar, { paddingBottom: Math.max(20, insets.bottom) }]}>
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'home' && styles.tabItemActive]}
-          onPress={() => setActiveTab('home')}
-        >
-          <Ionicons name="home" size={20} color={activeTab === 'home' ? '#2563eb' : '#64748b'} />
-          <Text style={[styles.tabText, activeTab === 'home' && styles.tabTextActive]}>Home</Text>
-        </TouchableOpacity>
+      <View style={styles.tabBarContainer}>
+        <View style={[styles.professionalTabBar, { paddingBottom: Math.max(20, insets.bottom) }]}>
+          <Pressable
+            style={[styles.tabItem, activeTab === 'home' && styles.tabItemActive]}
+            onPress={() => setActiveTab('home')}
+          >
+            <Ionicons name="home" size={20} color={activeTab === 'home' ? '#2563eb' : '#64748b'} />
+            <Text style={[styles.tabText, activeTab === 'home' && styles.tabTextActive]}>Home</Text>
+          </Pressable>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'camera' && styles.tabItemActive]}
-          onPress={() => setActiveTab('camera')}
-        >
-          <Ionicons name="camera" size={20} color={activeTab === 'camera' ? '#2563eb' : '#64748b'} />
-          <Text style={[styles.tabText, activeTab === 'camera' && styles.tabTextActive]}>Camera</Text>
-        </TouchableOpacity>
+          <Pressable
+            style={[styles.tabItem, activeTab === 'camera' && styles.tabItemActive]}
+            onPress={() => setActiveTab('camera')}
+          >
+            <Ionicons name="camera" size={20} color={activeTab === 'camera' ? '#2563eb' : '#64748b'} />
+            <Text style={[styles.tabText, activeTab === 'camera' && styles.tabTextActive]}>Camera</Text>
+          </Pressable>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'schedule' && styles.tabItemActive]}
-          onPress={() => setActiveTab('schedule')}
-        >
-          <Ionicons name="calendar" size={20} color={activeTab === 'schedule' ? '#2563eb' : '#64748b'} />
-          <Text style={[styles.tabText, activeTab === 'schedule' && styles.tabTextActive]}>Schedule</Text>
-        </TouchableOpacity>
+          <Pressable
+            style={[styles.tabItem, activeTab === 'schedule' && styles.tabItemActive]}
+            onPress={() => setActiveTab('schedule')}
+          >
+            <Ionicons name="calendar" size={20} color={activeTab === 'schedule' ? '#2563eb' : '#64748b'} />
+            <Text style={[styles.tabText, activeTab === 'schedule' && styles.tabTextActive]}>Schedule</Text>
+          </Pressable>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'clients' && styles.tabItemActive]}
-          onPress={() => setActiveTab('clients')}
-        >
-          <Ionicons name="people" size={20} color={activeTab === 'clients' ? '#2563eb' : '#64748b'} />
-          <Text style={[styles.tabText, activeTab === 'clients' && styles.tabTextActive]}>Clients</Text>
-        </TouchableOpacity>
+          <Pressable
+            style={[styles.tabItem, activeTab === 'clients' && styles.tabItemActive]}
+            onPress={() => setActiveTab('clients')}
+          >
+            <Ionicons name="people" size={20} color={activeTab === 'clients' ? '#2563eb' : '#64748b'} />
+            <Text style={[styles.tabText, activeTab === 'clients' && styles.tabTextActive]}>Clients</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -317,264 +296,183 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
   content: {
     flex: 1,
+    paddingBottom: 80, // Account for tab bar height
   },
 
-  // Professional Header
-  professionalHeader: {
+  // Safe Area Content
+  safeAreaContent: {
+    paddingHorizontal: 0,
+  },
+
+  // Tab Bar Container
+  tabBarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+
+  // AI Header
+  aiHeader: {
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    paddingTop: 50,
-    paddingBottom: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderBottomColor: '#f1f5f9',
+    paddingTop: 35,
+    paddingBottom: 12,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    width: '100%',
   },
   companyInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    maxWidth: '70%',
   },
   companyText: {
-    marginLeft: 12,
+    flex: 1,
   },
   companyName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1a365d',
-    letterSpacing: -0.5,
+    color: '#1e293b',
+    letterSpacing: -0.3,
   },
   companyTagline: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748b',
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 1,
   },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 16,
+  aiLogoContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  headerButton: {
-    padding: 8,
+  aiSettingsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
 
-  // Welcome Section
-  welcomeSection: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 20,
+  // AI Status Overview
+  aiStatusOverview: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#f8fafc',
+    marginHorizontal: 24,
     marginTop: 20,
-    marginBottom: 8,
     borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
   },
-  welcomeTitle: {
+  aiStatusItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  aiStatusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#2563eb',
+    marginBottom: 8,
+  },
+  aiStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1e293b',
+    textAlign: 'center',
+  },
+  aiStatusValue: {
     fontSize: 24,
     fontWeight: '700',
     color: '#1e293b',
     marginBottom: 4,
   },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: '#64748b',
-  },
-
-  // Metrics Section
-  metricsSection: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 20,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-
-  // Actions Section
-  actionsSection: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 20,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-
-  // Activity Section
-  activitySection: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-
-  // Dashboard Section
-  dashboardSection: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 16,
-    letterSpacing: -0.3,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  metricCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-  },
-  metricIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  metricContent: {
-    alignItems: 'center',
-  },
-  metricValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1e293b',
-    letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  metricLabel: {
+  aiStatusLabel: {
     fontSize: 11,
     color: '#64748b',
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
-    lineHeight: 14,
   },
 
-  // Sections
-  section: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 20,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+  // AI Action
+  aiActionSection: {
+    paddingHorizontal: 24,
+    marginTop: 24,
   },
-
-  // Quick Actions
-  actionGrid: {
-    gap: 16,
-  },
-  primaryAction: {
+  aiActionButton: {
     backgroundColor: '#2563eb',
     borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 20,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 12,
   },
-  primaryActionText: {
-    fontSize: 18,
+  aiActionText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
-    marginBottom: 4,
   },
-  primaryActionSubtext: {
-    fontSize: 14,
+  aiActionSubtext: {
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    position: 'absolute',
+    bottom: 8,
   },
-  secondaryActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+
+  // Recent Inspection
+  recentInspectionSection: {
+    paddingHorizontal: 24,
+    marginTop: 24,
   },
-  secondaryAction: {
-    flex: 1,
-    minWidth: '45%',
+  recentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  recentInspectionCard: {
     backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  secondaryActionText: {
+  recentInspectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  recentInspectionLocation: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginLeft: 8,
+  },
+  recentInspectionDate: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#475569',
-    marginTop: 4,
+    color: '#64748b',
   },
 
   // Transcription and Results
@@ -753,34 +651,108 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // System Status
-  statusGrid: {
+  
+  // Quick Actions
+  quickActionsSection: {
+    paddingHorizontal: 24,
+    marginTop: 24,
+  },
+  quickActionsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 16,
+  },
+  quickActionsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  statusItem: {
+  quickActionButton: {
+    width: '48%',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
-    flex: 1,
+    marginBottom: 8,
   },
-  statusText: {
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  quickActionSubtext: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#475569',
-    marginTop: 4,
+    color: '#64748b',
+    textAlign: 'center',
   },
 
-  // Professional Tab Bar
+  // Recent Activity
+  recentActivitySection: {
+    paddingHorizontal: 24,
+    marginTop: 24,
+  },
+  recentActivityTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  recentActivityCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  recentActivityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recentActivityIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  recentActivityContent: {
+    flex: 1,
+  },
+  recentActivityLocation: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  recentActivityDate: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+
+  // Tab Bar
   professionalTabBar: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    backgroundColor: 'transparent',
     paddingTop: 12,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   tabItem: {
     flex: 1,
@@ -788,7 +760,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tabItemActive: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f8fafc',
     borderRadius: 8,
     marginHorizontal: 4,
   },

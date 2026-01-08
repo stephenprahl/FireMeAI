@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface VoiceRecorderProps {
   onRecordingComplete: (audioUri: string) => void;
@@ -64,7 +64,7 @@ export default function VoiceRecorder({ onRecordingComplete, isProcessing = fals
         </Text>
 
         <View style={styles.recorderControls}>
-          <TouchableOpacity
+          <Pressable
             style={[styles.recordButton, isRecording && styles.recordButtonActive, isProcessing && styles.recordButtonDisabled]}
             onPress={isRecording ? stopRecording : startRecording}
             disabled={isProcessing}
@@ -80,7 +80,7 @@ export default function VoiceRecorder({ onRecordingComplete, isProcessing = fals
                 />
               )}
             </View>
-          </TouchableOpacity>
+          </Pressable>
 
           <Text style={[styles.statusText, isRecording && styles.statusTextActive]}>
             {isProcessing ? 'Processing audio...' : isRecording ? 'Recording... Tap to stop' : 'Tap microphone to start'}

@@ -1,12 +1,15 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React from 'react';
+import { View } from 'react-native';
+import ClientManagementComponent from '../../components/ClientManagementComponent';
 
-export default function clients() {
+export default function ClientsScreen() {
   return (
-    <View>
-      <Text>clients</Text>
+    <View style={{ flex: 1 }}>
+      <ClientManagementComponent
+        isVisible={true}
+        onClose={() => {}}
+        useModal={false}
+      />
     </View>
-  )
+  );
 }
-
-const styles = StyleSheet.create({})

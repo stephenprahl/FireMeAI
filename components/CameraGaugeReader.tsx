@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { VisionAnalysisResult, VisionService } from '../services/visionService';
 
 interface CameraGaugeReaderProps {
@@ -15,6 +15,15 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
   const [isProcessing, setIsProcessing] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<VisionAnalysisResult | null>(null);
+  const [selectedGaugeType, setSelectedGaugeType] = useState<'pressure' | 'temperature' | 'flow' | 'level'>('pressure');
+  const [flashEnabled, setFlashEnabled] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [recentReadings, setRecentReadings] = useState<VisionAnalysisResult[]>([]);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualValue, setManualValue] = useState('');
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchReadings, setBatchReadings] = useState<VisionAnalysisResult[]>([]);
+  const [autoCapture, setAutoCapture] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const visionService = new VisionService(process.env.OPENAI_API_KEY || 'your-api-key-here');
 
@@ -26,14 +35,99 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
 
   const handleSaveResult = () => {
     if (analysisResult) {
-      onGaugeRead(analysisResult);
-      onClose();
+      if (batchMode) {
+        setBatchReadings(prev => [...prev, analysisResult]);
+        setShowResults(false);
+        setAnalysisResult(null);
+      } else {
+        // Add to recent readings
+        setRecentReadings(prev => [analysisResult, ...prev.slice(0, 4)]);
+        onGaugeRead(analysisResult);
+        onClose();
+      }
     }
   };
 
   const handleRetake = () => {
     setShowResults(false);
     setAnalysisResult(null);
+  };
+
+  const toggleFlash = () => {
+    setFlashEnabled(!flashEnabled);
+  };
+
+  const toggleBatchMode = () => {
+    setBatchMode(!batchMode);
+    if (!batchMode) {
+      setBatchReadings([]);
+    }
+  };
+
+  const toggleAutoCapture = () => {
+    setAutoCapture(!autoCapture);
+  };
+
+  const handleManualInput = () => {
+    if (!manualValue.trim()) {
+      Alert.alert('Error', 'Please enter a reading value');
+      return;
+    }
+
+    const manualReading: VisionAnalysisResult = {
+      pressure: parseFloat(manualValue),
+      confidence: 1.0,
+      gaugeType: 'analog', // Use valid gauge type
+      corrosion: { detected: false, confidence: 0, severity: 'none' },
+      imageBase64: ''
+    };
+
+    if (batchMode) {
+      setBatchReadings(prev => [...prev, manualReading]);
+      setManualValue('');
+    } else {
+      setRecentReadings(prev => [manualReading, ...prev.slice(0, 4)]);
+      onGaugeRead(manualReading);
+      setShowManualInput(false);
+      setManualValue('');
+    }
+  };
+
+  const handleBatchComplete = () => {
+    if (batchReadings.length === 0) {
+      Alert.alert('Error', 'No readings captured');
+      return;
+    }
+
+    // Send all batch readings
+    batchReadings.forEach(reading => {
+      onGaugeRead(reading);
+    });
+    
+    Alert.alert('Success', `${batchReadings.length} readings saved successfully`);
+    setBatchMode(false);
+    setBatchReadings([]);
+    onClose();
+  };
+
+  const getGaugeIcon = (type: string) => {
+    switch (type) {
+      case 'pressure': return 'speedometer';
+      case 'temperature': return 'thermometer';
+      case 'flow': return 'water';
+      case 'level': return 'bar-chart';
+      default: return 'speedometer';
+    }
+  };
+
+  const getGaugeUnit = (type: string) => {
+    switch (type) {
+      case 'pressure': return 'PSI';
+      case 'temperature': return '°F';
+      case 'flow': return 'GPM';
+      case 'level': return '%';
+      default: return 'PSI';
+    }
   };
 
   const captureGauge = async () => {
@@ -85,9 +179,9 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
         {/* Results Header */}
         <View style={styles.resultsHeader}>
           <View style={styles.resultsHeaderLeft}>
-            <TouchableOpacity onPress={handleRetake} style={styles.backButton}>
+            <Pressable onPress={handleRetake} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color="#64748b" />
-            </TouchableOpacity>
+            </Pressable>
             <View style={styles.resultsHeaderText}>
               <Text style={styles.resultsTitle}>Analysis Results</Text>
               <Text style={styles.resultsSubtitle}>Gauge reading and corrosion detection</Text>
@@ -143,16 +237,37 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
 
           {/* Action Buttons */}
           <View style={styles.actionsSection}>
-            <TouchableOpacity onPress={handleSaveResult} style={styles.primaryAction}>
+            <Pressable onPress={handleSaveResult} style={styles.primaryAction}>
               <Ionicons name="checkmark-circle" size={20} color="white" />
               <Text style={styles.primaryActionText}>Save Reading</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity onPress={handleRetake} style={styles.secondaryAction}>
+            <Pressable onPress={handleRetake} style={styles.secondaryAction}>
               <Ionicons name="camera-reverse" size={20} color="#64748b" />
               <Text style={styles.secondaryActionText}>Retake Photo</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
+
+          {/* Recent Readings */}
+          {recentReadings.length > 0 && (
+            <View style={styles.recentSection}>
+              <Text style={styles.sectionTitle}>Recent Readings</Text>
+              {recentReadings.map((reading, index) => (
+                <View key={index} style={styles.recentReadingCard}>
+                  <View style={styles.recentReadingHeader}>
+                    <Ionicons name={getGaugeIcon(reading.gaugeType) as any} size={16} color="#2563eb" />
+                    <Text style={styles.recentReadingType}>{reading.gaugeType}</Text>
+                    <Text style={styles.recentReadingValue}>
+                      {reading.pressure} {getGaugeUnit(reading.gaugeType)}
+                    </Text>
+                  </View>
+                  <Text style={styles.recentReadingDate}>
+                    {new Date().toLocaleTimeString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </View>
     );
@@ -171,9 +286,9 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
           <Text style={styles.permissionSubtitle}>
             We need camera permission to scan pressure gauges and detect corrosion.
           </Text>
-          <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
+          <Pressable onPress={requestPermission} style={styles.permissionButton}>
             <Text style={styles.permissionButtonText}>Grant Permission</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     );
@@ -185,14 +300,43 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
         {/* Professional Header Overlay */}
         <View style={styles.headerOverlay}>
           <View style={styles.headerContent}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Pressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="white" />
-            </TouchableOpacity>
+            </Pressable>
             <Text style={styles.headerTitle}>Gauge Scanner</Text>
-            <TouchableOpacity style={styles.flashButton}>
-              <Ionicons name="flash" size={20} color="white" />
-            </TouchableOpacity>
+            <Pressable onPress={toggleFlash} style={styles.flashButton}>
+              <Ionicons name={flashEnabled ? "flash" : "flash-off"} size={20} color="white" />
+            </Pressable>
           </View>
+        </View>
+
+        {/* Gauge Type Selector */}
+        <View style={styles.gaugeTypeSelector}>
+          <Text style={styles.gaugeTypeLabel}>Select Gauge Type:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gaugeTypeScroll}>
+            {(['pressure', 'temperature', 'flow', 'level'] as const).map((type) => (
+              <Pressable
+                key={type}
+                style={[
+                  styles.gaugeTypeChip,
+                  selectedGaugeType === type && styles.gaugeTypeChipActive
+                ]}
+                onPress={() => setSelectedGaugeType(type)}
+              >
+                <Ionicons 
+                  name={getGaugeIcon(type) as any} 
+                  size={16} 
+                  color={selectedGaugeType === type ? '#ffffff' : '#2563eb'} 
+                />
+                <Text style={[
+                  styles.gaugeTypeText,
+                  selectedGaugeType === type && styles.gaugeTypeTextActive
+                ]}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Target Guide */}
@@ -210,8 +354,51 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
 
         {/* Bottom Controls */}
         <View style={styles.controlsOverlay}>
+          {/* Batch Mode Indicator */}
+          {batchMode && (
+            <View style={styles.batchIndicator}>
+              <Text style={styles.batchIndicatorText}>
+                Batch Mode: {batchReadings.length} readings
+              </Text>
+              <Pressable onPress={handleBatchComplete} style={styles.batchCompleteButton}>
+                <Text style={styles.batchCompleteButtonText}>Complete</Text>
+              </Pressable>
+            </View>
+          )}
+
           <View style={styles.controlsContent}>
-            <TouchableOpacity
+            {/* Control Buttons */}
+            <View style={styles.controlButtons}>
+              <Pressable onPress={toggleBatchMode} style={[
+                styles.controlButton,
+                batchMode && styles.controlButtonActive
+              ]}>
+                <Ionicons name="layers" size={20} color={batchMode ? '#ffffff' : '#64748b'} />
+                <Text style={[
+                  styles.controlButtonText,
+                  batchMode && styles.controlButtonTextActive
+                ]}>Batch</Text>
+              </Pressable>
+
+              <Pressable onPress={() => setShowManualInput(true)} style={styles.controlButton}>
+                <Ionicons name="create" size={20} color="#64748b" />
+                <Text style={styles.controlButtonText}>Manual</Text>
+              </Pressable>
+
+              <Pressable onPress={toggleAutoCapture} style={[
+                styles.controlButton,
+                autoCapture && styles.controlButtonActive
+              ]}>
+                <Ionicons name="repeat" size={20} color={autoCapture ? '#ffffff' : '#64748b'} />
+                <Text style={[
+                  styles.controlButtonText,
+                  autoCapture && styles.controlButtonTextActive
+                ]}>Auto</Text>
+              </Pressable>
+            </View>
+
+            {/* Capture Button */}
+            <Pressable
               style={[styles.captureButton, isProcessing && styles.captureButtonDisabled]}
               onPress={captureGauge}
               disabled={isProcessing}
@@ -223,15 +410,16 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
                   <Ionicons name="camera" size={24} color="white" />
                 )}
               </View>
-            </TouchableOpacity>
+            </Pressable>
             <Text style={styles.captureHint}>
-              {isProcessing ? 'Analyzing...' : 'Tap to scan gauge'}
+              {isProcessing ? 'Analyzing...' : batchMode ? `Tap to scan (${batchReadings.length} captured)` : 'Tap to scan gauge'}
             </Text>
           </View>
         </View>
       </CameraView>
     </View>
   );
+
 }
 
 const styles = StyleSheet.create({
@@ -328,6 +516,50 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
+  // Gauge Type Selector
+  gaugeTypeSelector: {
+    position: 'absolute',
+    top: 110,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  gaugeTypeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'white',
+    marginBottom: 12,
+  },
+  gaugeTypeScroll: {
+    flexDirection: 'row',
+  },
+  gaugeTypeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  gaugeTypeChipActive: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  gaugeTypeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'white',
+    marginLeft: 6,
+  },
+  gaugeTypeTextActive: {
+    color: 'white',
+  },
+
   targetOverlay: {
     flex: 1,
     justifyContent: 'center',
@@ -373,12 +605,67 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingBottom: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     paddingTop: 20,
+    paddingBottom: 40,
   },
   controlsContent: {
+    paddingHorizontal: 20,
+  },
+
+  // Batch Mode
+  batchIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#2563eb',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  batchIndicatorText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  batchCompleteButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+  },
+  batchCompleteButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Control Buttons
+  controlButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  controlButton: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    minWidth: 60,
+  },
+  controlButtonActive: {
+    backgroundColor: '#2563eb',
+  },
+  controlButtonText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  controlButtonTextActive: {
+    color: 'white',
   },
   captureButton: {
     marginBottom: 12,
@@ -567,5 +854,119 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 8,
+  },
+
+  // Recent Readings
+  recentSection: {
+    marginTop: 24,
+  },
+  recentReadingCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  recentReadingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  recentReadingType: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748b',
+    marginLeft: 8,
+    textTransform: 'capitalize',
+  },
+  recentReadingValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginLeft: 'auto',
+  },
+  recentReadingDate: {
+    fontSize: 11,
+    color: '#94a3b8',
+  },
+
+  // Manual Input Modal
+  manualInputContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  manualInputModal: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  manualInputHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  manualInputTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  manualInputContent: {
+    gap: 16,
+  },
+  manualInputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#64748b',
+  },
+  manualInputField: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    textAlign: 'center',
+  },
+  manualInputButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  manualInputCancelButton: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  manualInputCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  manualInputSaveButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  manualInputSaveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

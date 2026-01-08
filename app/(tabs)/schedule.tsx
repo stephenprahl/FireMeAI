@@ -1,12 +1,15 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React from 'react';
+import { View } from 'react-native';
+import SchedulingComponent from '../../components/SchedulingComponent';
 
-export default function schedule() {
+export default function ScheduleScreen() {
   return (
-    <View>
-      <Text>schedule</Text>
+    <View style={{ flex: 1 }}>
+      <SchedulingComponent
+        isVisible={true}
+        onClose={() => {}}
+        useModal={false}
+      />
     </View>
-  )
+  );
 }
-
-const styles = StyleSheet.create({})

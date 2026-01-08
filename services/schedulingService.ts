@@ -317,4 +317,11 @@ export class SchedulingService {
       .filter(job => job.status !== 'cancelled')
       .sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
   }
+
+  async deleteJob(jobId: string): Promise<void> {
+    const deleted = this.jobs.delete(jobId);
+    if (!deleted) {
+      throw new Error('Job not found');
+    }
+  }
 }

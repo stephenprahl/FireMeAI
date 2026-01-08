@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "nfp-ai",
-    "slug": "nfp-ai",
+    "name": "fireme",
+    "slug": "fireme",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

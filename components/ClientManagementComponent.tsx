@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Client, ClientManagementService, ServiceHistory } from '../services/clientManagementService';
 
 interface ClientManagementProps {
@@ -123,7 +123,7 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
   };
 
   const renderClientItem = ({ item: client }: { item: Client }) => (
-    <TouchableOpacity
+    <Pressable
       style={styles.clientItem}
       onPress={() => handleClientSelect(client)}
     >
@@ -151,7 +151,7 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
           </Text>
         )}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 
   const renderServiceHistoryItem = ({ item: service }: { item: ServiceHistory }) => (
@@ -176,65 +176,35 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
         <View style={styles.professionalHeader}>
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
-              <TouchableOpacity onPress={onClose} style={styles.backButton}>
+              <Pressable onPress={onClose} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#1a365d" />
-              </TouchableOpacity>
+              </Pressable>
               <View style={styles.headerText}>
                 <Text style={styles.headerTitle}>Client Management</Text>
                 <Text style={styles.headerSubtitle}>Manage client relationships</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={() => setShowAddClient(true)}>
+            <Pressable style={styles.addButton} onPress={() => setShowAddClient(true)}>
               <Ionicons name="add" size={20} color="white" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
         <View style={styles.content}>
-          {/* Enhanced Stats Dashboard */}
+          {/* Status Overview */}
           {stats && (
-            <View style={styles.statsSection}>
-              <Text style={styles.sectionTitle}>Overview</Text>
-              <View style={styles.statsGrid}>
-                <View style={styles.statCard}>
-                  <View style={styles.statIcon}>
-                    <Ionicons name="people" size={24} color="#2563eb" />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue}>{stats.totalClients}</Text>
-                    <Text style={styles.statLabel}>Total Clients</Text>
-                  </View>
-                </View>
-
-                <View style={styles.statCard}>
-                  <View style={styles.statIcon}>
-                    <Ionicons name="checkmark-circle" size={24} color="#059669" />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue}>{stats.activeClients}</Text>
-                    <Text style={styles.statLabel}>Active</Text>
-                  </View>
-                </View>
-
-                <View style={styles.statCard}>
-                  <View style={styles.statIcon}>
-                    <Ionicons name="warning" size={24} color="#d97706" />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue}>{stats.overdueServices}</Text>
-                    <Text style={styles.statLabel}>Overdue</Text>
-                  </View>
-                </View>
-
-                <View style={styles.statCard}>
-                  <View style={styles.statIcon}>
-                    <Ionicons name="calendar" size={24} color="#7c3aed" />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue}>{stats.upcomingServices}</Text>
-                    <Text style={styles.statLabel}>Upcoming</Text>
-                  </View>
-                </View>
+            <View style={styles.statusOverview}>
+              <View style={styles.statusItem}>
+                <Text style={styles.statusValue}>{stats.totalClients}</Text>
+                <Text style={styles.statusLabel}>Total Clients</Text>
+              </View>
+              <View style={styles.statusItem}>
+                <Text style={styles.statusValue}>{stats.activeClients}</Text>
+                <Text style={styles.statusLabel}>Active</Text>
+              </View>
+              <View style={styles.statusItem}>
+                <Text style={styles.statusValue}>{stats.overdueServices}</Text>
+                <Text style={styles.statusLabel}>Overdue</Text>
               </View>
             </View>
           )}
@@ -252,9 +222,9 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
                 returnKeyType="search"
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Pressable onPress={() => setSearchQuery('')} style={styles.clearButton}>
                   <Ionicons name="close-circle" size={20} color="#64748b" />
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           </View>
@@ -262,45 +232,45 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
           {/* Professional Tab Navigation */}
           <View style={styles.tabSection}>
             <View style={styles.tabContainer}>
-              <TouchableOpacity
+              <Pressable
                 style={[styles.tab, activeTab === 'all' && styles.tabActive]}
                 onPress={() => handleTabChange('all')}
               >
                 <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>All Clients</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
                 onPress={() => handleTabChange('upcoming')}
               >
                 <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>Upcoming</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={[styles.tab, activeTab === 'overdue' && styles.tabActive]}
                 onPress={() => handleTabChange('overdue')}
               >
                 <Text style={[styles.tabText, activeTab === 'overdue' && styles.tabTextActive]}>Overdue</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
 
-          {/* Client List */}
-          <View style={styles.clientListSection}>
-            <FlatList
-              data={clients}
-              renderItem={renderClientItem}
-              keyExtractor={(item) => item.id}
-              style={styles.clientList}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Ionicons name="people" size={48} color="#cbd5e1" />
-                  <Text style={styles.emptyTitle}>No clients found</Text>
-                  <Text style={styles.emptySubtitle}>
-                    {searchQuery ? 'Try adjusting your search terms' : 'Add your first client to get started'}
-                  </Text>
-                </View>
-              }
-            />
-          </View>
+        {/* Client List */}
+        <View style={styles.clientListSection}>
+          <FlatList
+            data={clients}
+            renderItem={renderClientItem}
+            keyExtractor={(item) => item.id}
+            style={styles.clientList}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Ionicons name="people-outline" size={48} color="#cbd5e1" />
+                <Text style={styles.emptyTitle}>No clients found</Text>
+                <Text style={styles.emptySubtitle}>
+                  {searchQuery ? 'Try adjusting your search' : 'Add your first client'}
+                </Text>
+              </View>
+            }
+          />
+        </View>
         </View>
 
         {/* Client Detail Modal */}
@@ -309,9 +279,9 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
             <View style={styles.detailContainer}>
               <View style={styles.detailHeader}>
                 <Text style={styles.detailTitle}>{selectedClient.name}</Text>
-                <TouchableOpacity onPress={() => setSelectedClient(null)} style={styles.closeButton}>
+                <Pressable onPress={() => setSelectedClient(null)} style={styles.closeButton}>
                   <Ionicons name="close" size={24} color="#333" />
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               <ScrollView style={styles.detailContent}>
@@ -357,95 +327,65 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
   ) : (
     <View style={styles.container}>
       <View style={[styles.content, { paddingBottom: 80 }]}>
-        {/* Enhanced Stats Dashboard */}
+        {/* Status Overview */}
         {stats && (
-          <View style={styles.statsSection}>
-            <Text style={styles.sectionTitle}>Overview</Text>
-            <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <View style={styles.statIcon}>
-                  <Ionicons name="people" size={24} color="#2563eb" />
-                </View>
-                <View style={styles.statContent}>
-                  <Text style={styles.statValue}>{stats.totalClients}</Text>
-                  <Text style={styles.statLabel}>Total Clients</Text>
-                </View>
-              </View>
-
-              <View style={styles.statCard}>
-                <View style={styles.statIcon}>
-                  <Ionicons name="checkmark-circle" size={24} color="#059669" />
-                </View>
-                <View style={styles.statContent}>
-                  <Text style={styles.statValue}>{stats.activeClients}</Text>
-                  <Text style={styles.statLabel}>Active</Text>
-                </View>
-              </View>
-
-              <View style={styles.statCard}>
-                <View style={styles.statIcon}>
-                  <Ionicons name="warning" size={24} color="#d97706" />
-                </View>
-                <View style={styles.statContent}>
-                  <Text style={styles.statValue}>{stats.overdueServices}</Text>
-                  <Text style={styles.statLabel}>Overdue</Text>
-                </View>
-              </View>
-
-              <View style={styles.statCard}>
-                <View style={styles.statIcon}>
-                  <Ionicons name="calendar" size={24} color="#7c3aed" />
-                </View>
-                <View style={styles.statContent}>
-                  <Text style={styles.statValue}>{stats.upcomingServices}</Text>
-                  <Text style={styles.statLabel}>Upcoming</Text>
-                </View>
-              </View>
+          <View style={styles.statusOverview}>
+            <View style={styles.statusItem}>
+              <Text style={styles.statusValue}>{stats.totalClients}</Text>
+              <Text style={styles.statusLabel}>Total Clients</Text>
+            </View>
+            <View style={styles.statusItem}>
+              <Text style={styles.statusValue}>{stats.activeClients}</Text>
+              <Text style={styles.statusLabel}>Active</Text>
+            </View>
+            <View style={styles.statusItem}>
+              <Text style={styles.statusValue}>{stats.overdueServices}</Text>
+              <Text style={styles.statusLabel}>Overdue</Text>
             </View>
           </View>
         )}
 
-        {/* Enhanced Search */}
+        {/* Search */}
         <View style={styles.searchSection}>
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
+            <Ionicons name="search-outline" size={20} color="#64748b" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search clients by name, address, or contact..."
+              placeholder="Search clients..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color="#64748b" />
-              </TouchableOpacity>
+              <Pressable onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Ionicons name="close-circle-outline" size={20} color="#64748b" />
+              </Pressable>
             )}
           </View>
         </View>
 
-        {/* Professional Tab Navigation */}
+        {/* Tab Navigation */}
         <View style={styles.tabSection}>
           <View style={styles.tabContainer}>
-            <TouchableOpacity
+            <Pressable
               style={[styles.tab, activeTab === 'all' && styles.tabActive]}
               onPress={() => handleTabChange('all')}
             >
-              <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>All Clients</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+              <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>All</Text>
+            </Pressable>
+            <Pressable
               style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
               onPress={() => handleTabChange('upcoming')}
             >
               <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>Upcoming</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               style={[styles.tab, activeTab === 'overdue' && styles.tabActive]}
               onPress={() => handleTabChange('overdue')}
             >
               <Text style={[styles.tabText, activeTab === 'overdue' && styles.tabTextActive]}>Overdue</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -475,9 +415,9 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
           <View style={styles.detailContainer}>
             <View style={styles.detailHeader}>
               <Text style={styles.detailTitle}>{selectedClient.name}</Text>
-              <TouchableOpacity onPress={() => setSelectedClient(null)} style={styles.closeButton}>
+              <Pressable onPress={() => setSelectedClient(null)} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView style={styles.detailContent}>
@@ -505,14 +445,15 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
 
               <View style={styles.detailSection}>
                 <Text style={styles.detailSectionTitle}>Service History</Text>
-                <FlatList
-                  data={serviceHistory}
-                  renderItem={renderServiceHistoryItem}
-                  keyExtractor={(item) => item.id}
-                  ListEmptyComponent={
-                    <Text style={styles.emptyText}>No service history available</Text>
-                  }
-                />
+                {serviceHistory.length > 0 ? (
+                  serviceHistory.map((service) => (
+                    <View key={service.id}>
+                      {renderServiceHistoryItem({ item: service })}
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>No service history available</Text>
+                )}
               </View>
             </ScrollView>
           </View>
@@ -525,7 +466,7 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
   content: {
     flex: 1,
@@ -535,20 +476,15 @@ const styles = StyleSheet.create({
   professionalHeader: {
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    paddingTop: 50,
+    borderBottomColor: '#f1f5f9',
+    paddingTop: 45,
     paddingBottom: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -563,96 +499,58 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1a365d',
-    letterSpacing: -0.5,
+    color: '#1e293b',
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748b',
     fontWeight: '500',
     marginTop: 2,
   },
   addButton: {
     backgroundColor: '#2563eb',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
 
-  // Stats Section
-  statsSection: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 16,
-    letterSpacing: -0.3,
-  },
-  statsGrid: {
+  // Status Overview
+  statusOverview: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#ffffff',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#f8fafc',
+    marginHorizontal: 24,
+    marginTop: 20,
     borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
   },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
+  statusItem: {
     alignItems: 'center',
-    marginRight: 12,
-  },
-  statContent: {
     flex: 1,
   },
-  statValue: {
+  statusValue: {
     fontSize: 24,
     fontWeight: '700',
     color: '#1e293b',
-    letterSpacing: -0.5,
+    marginBottom: 4,
   },
-  statLabel: {
-    fontSize: 12,
+  statusLabel: {
+    fontSize: 11,
     color: '#64748b',
     fontWeight: '500',
-    marginTop: 2,
+    textAlign: 'center',
   },
 
   // Search Section
   searchSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#ffffff',
-    marginBottom: 8,
+    paddingHorizontal: 24,
+    marginTop: 24,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -669,7 +567,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     color: '#1e293b',
     paddingVertical: 0,
   },
@@ -679,46 +577,40 @@ const styles = StyleSheet.create({
 
   // Tab Section
   tabSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#ffffff',
-    marginBottom: 8,
+    paddingHorizontal: 24,
+    marginTop: 20,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f8fafc',
     borderRadius: 12,
     padding: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
     alignItems: 'center',
   },
   tabActive: {
     backgroundColor: '#ffffff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     color: '#64748b',
   },
   tabTextActive: {
-    color: '#2563eb',
+    color: '#1e40af',
     fontWeight: '600',
   },
 
   // Client List Section
   clientListSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: 24,
+    marginTop: 20,
+    flex: 1,
   },
   clientList: {
     flex: 1,
@@ -728,10 +620,9 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    marginTop: 8,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#475569',
     marginTop: 16,
@@ -745,19 +636,14 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Client Item (keeping existing styles for now)
+  // Client Item
   clientItem: {
     backgroundColor: '#ffffff',
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
   },
   clientHeader: {
     flexDirection: 'row',
@@ -778,7 +664,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     marginBottom: 2,
-    lineHeight: 20,
   },
   clientContact: {
     fontSize: 12,
@@ -788,7 +673,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#2563eb',
   },
   industryText: {
     color: 'white',
@@ -807,8 +691,8 @@ const styles = StyleSheet.create({
   },
   systemType: {
     fontSize: 11,
-    color: '#2563eb',
-    backgroundColor: '#eff6ff',
+    color: '#1e40af',
+    backgroundColor: '#f0f9ff',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -822,10 +706,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Detail Modal (keeping existing styles)
+  // Detail Modal
   detailContainer: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
   detailHeader: {
     flexDirection: 'row',
@@ -834,13 +718,13 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#f1f5f9',
   },
   detailTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1e293b',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   detailContent: {
     flex: 1,
@@ -907,7 +791,7 @@ const styles = StyleSheet.create({
   },
   serviceCost: {
     fontSize: 12,
-    color: '#2563eb',
+    color: '#1e40af',
     fontWeight: '600',
     marginBottom: 2,
   },
@@ -921,7 +805,7 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: 'center',
     color: '#64748b',
-    fontSize: 16,
+    fontSize: 14,
     fontStyle: 'italic',
     marginVertical: 20,
   },
