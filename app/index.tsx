@@ -1,18 +1,12 @@
-import ClientManagementComponent from '@/components/ClientManagementComponent';
-import SchedulingComponent from '@/components/SchedulingComponent';
-import TabBar from '@/components/TabBar';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import CameraGaugeReader from '../components/CameraGaugeReader';
-import VoiceRecorder from '../components/VoiceRecorder';
+import { Alert, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AIAgentService } from '../services/aiAgentService';
 import { DatabaseService } from '../services/databaseService';
 import { LangGraphAgentService } from '../services/langGraphAgentService';
 import { NotificationService } from '../services/notificationService';
 import { PDFService } from '../services/pdfService';
 import { PrismaDatabaseService } from '../services/prismaDatabaseService';
-import { Job } from '../services/schedulingService';
 import { SyncService } from '../services/syncService';
 import { VisionAnalysisResult } from '../services/visionService';
 import { WhisperService } from '../services/whisperService';
@@ -48,14 +42,14 @@ export default function Index() {
         // Initialize both databases for comparison
         await databaseService.initializeDatabase();
         await prismaDatabaseService.initializeDatabase();
-        
+
         // Initialize notification service
         await notificationService.initialize();
-        
+
         // Load inspection count
         const inspections = await prismaDatabaseService.findManyInspections();
         setInspectionCount(inspections.length);
-        
+
         console.log('App initialized successfully');
       } catch (error) {
         console.error('Failed to initialize app:', error);
@@ -63,7 +57,7 @@ export default function Index() {
       }
     };
 
-    
+
     initializeApp();
   }, []);
 
@@ -76,10 +70,10 @@ export default function Index() {
     try {
       // Use real Whisper API transcription if API key is available, otherwise use mock
       const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here';
-      const transcriptionResult = hasApiKey 
+      const transcriptionResult = hasApiKey
         ? await whisperService.transcribeAudio(audioUri)
         : await whisperService.mockTranscribeAudio(audioUri);
-      
+
       setTranscription(transcriptionResult.text);
 
       // Use advanced LangGraph agent for processing
@@ -87,7 +81,7 @@ export default function Index() {
         transcriptionResult.text,
         inspection || undefined
       );
-      
+
       setMissingFields(agentResponse.missingCriticalFields);
       setComplianceStatus(agentResponse.overallStatus);
 
@@ -102,7 +96,7 @@ export default function Index() {
       // Save to offline database (using Prisma service)
       await prismaDatabaseService.createInspection(newInspection);
       setInspectionCount(prev => prev + 1);
-      
+
       // Update sync status
       const status = await syncService.getSyncStatus();
       setSyncStatus({
@@ -116,11 +110,11 @@ export default function Index() {
         const questionText = criticalQuestions.length > 0
           ? criticalQuestions.map(q => q.question).join('\n\n')
           : agentResponse.followUpQuestions.slice(0, 3).map(q => q.question).join('\n\n');
-          
+
         Alert.alert(
           agentResponse.overallStatus === 'non_compliant' ? 'Compliance Issues Found' : 'Additional Information Needed',
           questionText,
-          [{ text: 'OK', onPress: () => {} }]
+          [{ text: 'OK', onPress: () => { } }]
         );
       }
 
@@ -139,10 +133,10 @@ export default function Index() {
   };
 
   const handleGaugeRead = (reading: VisionAnalysisResult) => {
-    const corrosionMessage = reading.corrosion.detected 
+    const corrosionMessage = reading.corrosion.detected
       ? `\nCorrosion Detected: ${reading.corrosion.severity.toUpperCase()} (${Math.round(reading.corrosion.confidence * 100)}% confidence)`
       : '\nNo corrosion detected';
-    
+
     Alert.alert(
       'Gauge Analysis Complete',
       `Pressure: ${reading.pressure} PSI\nConfidence: ${Math.round(reading.confidence * 100)}%\nGauge Type: ${reading.gaugeType}${corrosionMessage}`,
@@ -171,7 +165,7 @@ export default function Index() {
     setIsGeneratingPDF(true);
     try {
       const pdfUri = await pdfService.generateNFPAReport(inspection);
-      
+
       Alert.alert(
         'PDF Generated Successfully',
         'NFPA inspection report has been generated. Would you like to share it?',
@@ -198,7 +192,7 @@ export default function Index() {
     setIsGeneratingPDF(true);
     try {
       const pdfUri = await pdfService.generateSamplePDF();
-      
+
       Alert.alert(
         'Sample PDF Generated',
         'A sample NFPA 25 inspection report has been generated for testing purposes.',
@@ -244,192 +238,90 @@ export default function Index() {
     }
   };
 
-  const handleTabPress = (tab: string) => {
-    setActiveTab(tab);
-    // Close any open modals when switching tabs
-    setShowCamera(false);
-    setShowScheduling(false);
-    setShowClientManagement(false);
-  };
-
   const renderTabContent = () => {
     switch (activeTab) {
       case 'home':
-        return (
-          <View>
-            {/* Action Buttons */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.cameraButton}
-                  onPress={() => setShowCamera(true)}
-                >
-                  <Ionicons name="camera" size={20} color="white" />
-                  <Text style={styles.cameraButtonText}>Scan Gauge</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.syncButton,
-                    !syncStatus.isOnline && { backgroundColor: '#8E8E93' }
-                  ]}
-                  onPress={() => syncService.forceSync()}
-                >
-                  <Ionicons 
-                    name={syncStatus.isOnline ? "cloud-upload" : "cloud-offline"} 
-                    size={20} 
-                    color="white" 
-                  />
-                  <Text style={styles.cameraButtonText}>
-                    {syncStatus.pendingCount > 0 ? `Sync (${syncStatus.pendingCount})` : 'Sync'}
-                  </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.notificationButton}
-                  onPress={handleTestNotification}
-                >
-                  <Ionicons name="notifications" size={20} color="white" />
-                  <Text style={styles.cameraButtonText}>Test Alert</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+        return null; // Home content is now in the main render
 
-            {/* Voice Recorder */}
-            <VoiceRecorder 
-              onRecordingComplete={handleRecordingComplete}
-              isProcessing={isProcessing}
-            />
-
-            {/* Transcription Display */}
-            {transcription ? (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Transcription:</Text>
-                <View style={styles.transcriptionBox}>
-                  <Text style={styles.transcriptionText}>{transcription}</Text>
-                </View>
-              </View>
-            ) : null}
-
-            {/* Inspection Results */}
-            {inspection ? (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Inspection Data:</Text>
-                  <View style={styles.pdfButtons}>
-                    <TouchableOpacity
-                      style={[styles.pdfButton, isGeneratingPDF && styles.pdfButtonDisabled]}
-                      onPress={handleGeneratePDF}
-                      disabled={isGeneratingPDF}
-                    >
-                      <Ionicons name="document-text" size={20} color="white" />
-                      <Text style={styles.pdfButtonText}>
-                        {isGeneratingPDF ? 'Generating...' : 'Generate PDF'}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.sampleButton, isGeneratingPDF && styles.pdfButtonDisabled]}
-                      onPress={handleGenerateSamplePDF}
-                      disabled={isGeneratingPDF}
-                    >
-                      <Ionicons name="document-text-outline" size={20} color="white" />
-                      <Text style={styles.pdfButtonText}>
-                        Sample PDF
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                {inspection.risers.map((riser) => (
-                  <View key={riser.riserNumber} style={styles.riserCard}>
-                    <Text style={styles.riserTitle}>Riser {riser.riserNumber}</Text>
-                    <Text style={styles.riserDetail}>
-                      Static Pressure: {riser.staticPressure} PSI
-                    </Text>
-                    {riser.residualPressure > 0 && (
-                      <Text style={styles.riserDetail}>
-                        Residual Pressure: {riser.residualPressure} PSI
-                      </Text>
-                    )}
-                    <Text style={styles.riserDetail}>
-                      Control Valve: {riser.controlValveStatus.replace('_', ' ')}
-                    </Text>
-                    <Text style={styles.riserDetail}>
-                      Butterfly Valve: {riser.butterflyValveStatus.replace('_', ' ')}
-                    </Text>
-                    <Text style={styles.riserDetail}>
-                      Corrosion: {riser.corrosion}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-
-            {/* Missing Fields */}
-            {missingFields.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Missing Information:</Text>
-                {missingFields.map((field, index) => (
-                  <Text key={index} style={styles.missingField}>• {field}</Text>
-                ))}
-              </View>
-            )}
-          </View>
-        );
-      
       case 'camera':
         return (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Camera Gauge Reader</Text>
-            <CameraGaugeReader
-              onGaugeRead={handleGaugeRead}
-              onClose={() => setActiveTab('home')}
-            />
+            <Pressable
+              style={styles.primaryAction}
+              onPress={() => {
+                console.log('Scan gauge button pressed');
+                setShowCamera(true);
+              }}
+            >
+              <View style={styles.actionIcon}>
+                <Ionicons name="camera" size={28} color="white" />
+              </View>
+              <Text style={styles.primaryActionText}>Scan Gauge</Text>
+              <Text style={styles.primaryActionSubtext}>AI-powered pressure reading</Text>
+            </Pressable>
           </View>
         );
-      
+
       case 'schedule':
         return (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Scheduling & Dispatch</Text>
-            <TouchableOpacity
-              style={styles.scheduleButton}
+            <Pressable
+              style={styles.primaryAction}
               onPress={() => setShowScheduling(true)}
             >
-              <Ionicons name="calendar" size={20} color="white" />
-              <Text style={styles.cameraButtonText}>Open Schedule</Text>
-            </TouchableOpacity>
+              <View style={styles.actionIcon}>
+                <Ionicons name="calendar" size={28} color="white" />
+              </View>
+              <Text style={styles.primaryActionText}>Open Schedule</Text>
+              <Text style={styles.primaryActionSubtext}>Manage inspections and jobs</Text>
+            </Pressable>
           </View>
         );
-      
+
       case 'clients':
         return (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Client Management</Text>
-            <TouchableOpacity
-              style={styles.clientButton}
+            <Pressable
+              style={styles.primaryAction}
               onPress={() => setShowClientManagement(true)}
             >
-              <Ionicons name="people" size={20} color="white" />
-              <Text style={styles.cameraButtonText}>Open Clients</Text>
-            </TouchableOpacity>
+              <View style={styles.actionIcon}>
+                <Ionicons name="people" size={28} color="white" />
+              </View>
+              <Text style={styles.primaryActionText}>Open Clients</Text>
+              <Text style={styles.primaryActionSubtext}>Manage client relationships</Text>
+            </Pressable>
           </View>
         );
-      
+
       case 'alerts':
         return (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notifications & Alerts</Text>
-            <TouchableOpacity
-              style={styles.emergencyButton}
+            <Pressable
+              style={styles.primaryAction}
               onPress={handleEmergencyAlert}
             >
-              <Ionicons name="warning" size={20} color="white" />
-              <Text style={styles.cameraButtonText}>Test Emergency</Text>
-            </TouchableOpacity>
+              <View style={styles.actionIcon}>
+                <Ionicons name="warning" size={28} color="white" />
+              </View>
+              <Text style={styles.primaryActionText}>Emergency Alert</Text>
+              <Text style={styles.primaryActionSubtext}>Send critical notifications</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.secondaryAction, { marginTop: 16 }]}
+              onPress={handleTestNotification}
+            >
+              <Ionicons name="notifications" size={20} color="#1a365d" />
+              <Text style={styles.secondaryActionText}>Test Notification</Text>
+            </Pressable>
           </View>
         );
-      
+
       default:
         return null;
     }
@@ -437,382 +329,473 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>Voice Inspector</Text>
-            <Text style={styles.subtitle}>NFPA Fire Safety Inspection</Text>
-          </View>
-          <View style={styles.headerStats}>
-            <Text style={styles.inspectionCount}>{inspectionCount} Inspections</Text>
-            {complianceStatus && (
-              <View style={[
-                styles.complianceBadge,
-                complianceStatus === 'compliant' ? styles.complianceBadgeGood :
-                complianceStatus === 'non_compliant' ? styles.complianceBadgeBad :
-                styles.complianceBadgeWarning
-              ]}>
-                <Text style={styles.complianceText}>
-                  {complianceStatus === 'compliant' ? '✅' : 
-                   complianceStatus === 'non_compliant' ? '❌' : '⚠️'}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-        
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.cameraButton}
-            onPress={() => setShowCamera(true)}
-          >
-            <Ionicons name="camera" size={20} color="white" />
-            <Text style={styles.cameraButtonText}>Scan Gauge</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[
-              styles.syncButton,
-              !syncStatus.isOnline && { backgroundColor: '#8E8E93' }
-            ]}
-            onPress={() => syncService.forceSync()}
-          >
-            <Ionicons 
-              name={syncStatus.isOnline ? "cloud-upload" : "cloud-offline"} 
-              size={20} 
-              color="white" 
-            />
-            <Text style={styles.cameraButtonText}>
-              {syncStatus.pendingCount > 0 ? `Sync (${syncStatus.pendingCount})` : 'Sync'}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={handleTestNotification}
-          >
-            <Ionicons name="notifications" size={20} color="white" />
-            <Text style={styles.cameraButtonText}>Test Alert</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>Voice Inspector</Text>
-            <Text style={styles.subtitle}>NFPA Fire Safety Inspection</Text>
-          </View>
-          <View style={styles.headerStats}>
-            <Text style={styles.inspectionCount}>{inspectionCount} Inspections</Text>
-            {complianceStatus && (
-              <View style={[
-                styles.complianceBadge,
-                complianceStatus === 'compliant' ? styles.complianceBadgeGood :
-                complianceStatus === 'non_compliant' ? styles.complianceBadgeBad :
-                styles.complianceBadgeWarning
-              ]}>
-                <Text style={styles.complianceText}>
-                  {complianceStatus === 'compliant' ? '✓' : 
-                   complianceStatus === 'non_compliant' ? '✗' : '!'}
-                </Text>
-              </View>
-            )}
+      <View style={styles.professionalHeader}>
+        <View style={styles.headerContent}>
+          <View style={styles.companyInfo}>
+            <Text style={styles.companyName}>Voice Inspector AI</Text>
+            <Text style={styles.companyTagline}>Field inspection assistant</Text>
           </View>
         </View>
       </View>
-      
-      {renderTabContent()}
-      </ScrollView>
-      
-      <TabBar activeTab={activeTab} onTabPress={handleTabPress} />
-      
-      {/* Modals */}
-      {showCamera && (
-        <CameraGaugeReader
-          onGaugeRead={handleGaugeRead}
-          onClose={() => setShowCamera(false)}
-        />
-      )}
-      
-      {showScheduling && (
-        <SchedulingComponent
-          isVisible={showScheduling}
-          onClose={() => setShowScheduling(false)}
-          onJobCreated={(job: Job) => {
-            Alert.alert('Job Created', `New job scheduled: ${job.title}`);
-          }}
-        />
-      )}
-      
-      {showClientManagement && (
-        <ClientManagementComponent
-          isVisible={showClientManagement}
-          onClose={() => setShowClientManagement(false)}
-        />
-      )}
+
+      <View style={styles.content}>
+        {renderTabContent()}
+      </View>
+
+      <View style={styles.professionalTabBar}>
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === 'home' && styles.tabItemActive]}
+          onPress={() => setActiveTab('home')}
+        >
+          <Ionicons name="home" size={20} color={activeTab === 'home' ? '#2563eb' : '#64748b'} />
+          <Text style={[styles.tabText, activeTab === 'home' && styles.tabTextActive]}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === 'camera' && styles.tabItemActive]}
+          onPress={() => setActiveTab('camera')}
+        >
+          <Ionicons name="camera" size={20} color={activeTab === 'camera' ? '#2563eb' : '#64748b'} />
+          <Text style={[styles.tabText, activeTab === 'camera' && styles.tabTextActive]}>Camera</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === 'schedule' && styles.tabItemActive]}
+          onPress={() => setActiveTab('schedule')}
+        >
+          <Ionicons name="calendar" size={20} color={activeTab === 'schedule' ? '#2563eb' : '#64748b'} />
+          <Text style={[styles.tabText, activeTab === 'schedule' && styles.tabTextActive]}>Schedule</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === 'clients' && styles.tabItemActive]}
+          onPress={() => setActiveTab('clients')}
+        >
+          <Ionicons name="people" size={20} color={activeTab === 'clients' ? '#2563eb' : '#64748b'} />
+          <Text style={[styles.tabText, activeTab === 'clients' && styles.tabTextActive]}>Clients</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === 'alerts' && styles.tabItemActive]}
+          onPress={() => setActiveTab('alerts')}
+        >
+          <Ionicons name="warning" size={20} color={activeTab === 'alerts' ? '#2563eb' : '#64748b'} />
+          <Text style={[styles.tabText, activeTab === 'alerts' && styles.tabTextActive]}>Alerts</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   content: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    alignItems: 'center',
-    backgroundColor: '#fff',
+
+  // Professional Header
+  professionalHeader: {
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
-  },
-  section: {
-    margin: 16,
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    elevation: 2,
+    borderBottomColor: '#e2e8f0',
+    paddingTop: 50,
+    paddingBottom: 16,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  companyInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  companyText: {
+    marginLeft: 12,
+  },
+  companyName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a365d',
+    letterSpacing: -0.5,
+  },
+  companyTagline: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  headerButton: {
+    padding: 8,
+  },
+
+  // Dashboard Section
+  dashboardSection: {
+    padding: 20,
+    backgroundColor: '#ffffff',
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  metricIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  metricContent: {
+    flex: 1,
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: -0.5,
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+
+  // Sections
+  section: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
+  // Quick Actions
+  actionGrid: {
+    gap: 16,
+  },
+  primaryAction: {
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  actionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 12,
   },
-  transcriptionBox: {
-    backgroundColor: '#f8f9fa',
+  primaryActionText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  primaryActionSubtext: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  secondaryAction: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
     padding: 12,
-    borderRadius: 6,
-    borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  secondaryActionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#475569',
+    marginTop: 4,
+  },
+
+  // Transcription and Results
+  transcriptionBox: {
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   transcriptionText: {
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 24,
-  },
-  riserCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  riserTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  riserDetail: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  missingField: {
-    fontSize: 14,
-    color: '#FF3B30',
-    marginBottom: 4,
+    color: '#475569',
+    lineHeight: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    flexWrap: 'wrap',
+    marginBottom: 16,
   },
   pdfButtons: {
     flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
+    gap: 8,
   },
   pdfButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 6,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    minWidth: 120,
   },
   sampleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#34C759',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: '#059669',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 6,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    minWidth: 100,
   },
   pdfButtonDisabled: {
-    backgroundColor: '#8E8E93',
+    backgroundColor: '#94a3b8',
   },
   pdfButtonText: {
     color: 'white',
     fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 4,
+    fontWeight: '600',
+    marginLeft: 6,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  riserCard: {
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  headerText: {
-    flex: 1,
+  riserTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
   },
-  headerStats: {
-    alignItems: 'flex-end',
-  },
-  inspectionCount: {
-    fontSize: 12,
-    color: '#666',
+  riserDetail: {
+    fontSize: 14,
+    color: '#64748b',
     marginBottom: 4,
   },
-  complianceBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  missingField: {
+    fontSize: 14,
+    color: '#dc2626',
+    marginBottom: 4,
+  },
+
+  // Activity List
+  activityList: {
+    gap: 12,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  complianceBadgeGood: {
-    backgroundColor: '#34C759',
+  activityContent: {
+    flex: 1,
   },
-  complianceBadgeBad: {
-    backgroundColor: '#FF3B30',
+  activityTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
   },
-  complianceBadgeWarning: {
-    backgroundColor: '#FF9500',
-  },
-  complianceText: {
-    color: 'white',
+  activitySubtitle: {
     fontSize: 12,
-    fontWeight: 'bold',
+    color: '#64748b',
+    marginTop: 2,
   },
-  actionButtons: {
+  activityAction: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#2563eb',
+    borderRadius: 6,
+  },
+  activityActionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#ffffff',
+  },
+
+  // Status Cards
+  statusCard: {
     flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 8,
+  },
+  statusCompliant: {
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  statusNonCompliant: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  statusWarning: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  statusIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  cameraButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    minWidth: 120,
+    marginRight: 12,
   },
-  syncButton: {
+  statusContent: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  statusSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 2,
+  },
+
+  // System Status
+  statusGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#34C759',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    minWidth: 100,
+    justifyContent: 'space-around',
   },
-  scheduleButton: {
-    flexDirection: 'row',
+  statusItem: {
     alignItems: 'center',
-    backgroundColor: '#FF9500',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    minWidth: 100,
+    flex: 1,
   },
-  notificationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    minWidth: 100,
-  },
-  emergencyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    minWidth: 100,
-  },
-  clientButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#5856D6',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    minWidth: 100,
-  },
-  cameraButtonText: {
-    color: 'white',
+  statusText: {
     fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 4,
+    fontWeight: '500',
+    color: '#475569',
+    marginTop: 4,
+  },
+
+  // Professional Tab Bar
+  professionalTabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingBottom: 20,
+    paddingTop: 12,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  tabItemActive: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  tabText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#64748b',
+    marginTop: 4,
+  },
+  tabTextActive: {
+    color: '#2563eb',
   },
 });

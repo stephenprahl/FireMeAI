@@ -11,6 +11,7 @@ interface SchedulingComponentProps {
 
 export default function SchedulingComponent({ isVisible, onClose, onJobCreated }: SchedulingComponentProps) {
   const [schedulingService] = useState(() => new SchedulingService());
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [upcomingJobs, setUpcomingJobs] = useState<Job[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dailySchedule, setDailySchedule] = useState<{ technician: string; jobs: Job[] }[]>([]);
@@ -19,10 +20,20 @@ export default function SchedulingComponent({ isVisible, onClose, onJobCreated }
 
   useEffect(() => {
     if (isVisible) {
+      loadJobs();
       loadUpcomingJobs();
       loadDailySchedule();
     }
   }, [isVisible, selectedDate]);
+
+  const loadJobs = async () => {
+    try {
+      const todayJobs = await schedulingService.getJobsForDate(new Date());
+      setJobs(todayJobs);
+    } catch (error) {
+      console.error('Error loading jobs:', error);
+    }
+  };
 
   const loadUpcomingJobs = async () => {
     try {
@@ -54,13 +65,15 @@ export default function SchedulingComponent({ isVisible, onClose, onJobCreated }
         'Job Created Successfully',
         `New job scheduled for ${job.scheduledDate.toLocaleDateString()} at ${job.scheduledDate.toLocaleTimeString()}`,
         [
-          { text: 'OK', onPress: () => {
-            setVoiceInput('');
-            setShowVoiceInput(false);
-            loadUpcomingJobs();
-            loadDailySchedule();
-            onJobCreated?.(job);
-          }}
+          {
+            text: 'OK', onPress: () => {
+              setVoiceInput('');
+              setShowVoiceInput(false);
+              loadUpcomingJobs();
+              loadDailySchedule();
+              onJobCreated?.(job);
+            }
+          }
         ]
       );
     } catch (error) {
@@ -90,34 +103,193 @@ export default function SchedulingComponent({ isVisible, onClose, onJobCreated }
   };
 
   const formatJobTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
   return (
     <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Scheduling & Dispatch</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#333" />
-          </TouchableOpacity>
+        {/* Professional Header */}
+        <View style={styles.professionalHeader}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <TouchableOpacity onPress={onClose} style={styles.backButton}>
+                <Ionicons name="arrow-back" size={24} color="#1a365d" />
+              </TouchableOpacity>
+              <View style={styles.headerText}>
+                <Text style={styles.headerTitle}>Scheduling & Dispatch</Text>
+                <Text style={styles.headerSubtitle}>Manage inspections and jobs</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.addButton} onPress={() => setShowVoiceInput(true)}>
+              <Ionicons name="add" size={20} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView style={styles.content}>
-          {/* Voice Input Section */}
+          {/* Dashboard Overview */}
+          <View style={styles.dashboardSection}>
+            <Text style={styles.sectionTitle}>Today's Overview</Text>
+            <View style={styles.metricsGrid}>
+              <View style={styles.metricCard}>
+                <View style={styles.metricIcon}>
+                  <Ionicons name="calendar" size={24} color="#2563eb" />
+                </View>
+                <View style={styles.metricContent}>
+                  <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'scheduled').length}</Text>
+                  <Text style={styles.metricLabel}>Scheduled Today</Text>
+                </View>
+              </View>
+
+              <View style={styles.metricCard}>
+                <View style={styles.metricIcon}>
+                  <Ionicons name="checkmark-circle" size={24} color="#059669" />
+                </View>
+                <View style={styles.metricContent}>
+                  <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'completed').length}</Text>
+                  <Text style={styles.metricLabel}>Completed</Text>
+                </View>
+              </View>
+
+              <View style={styles.metricCard}>
+                <View style={styles.metricIcon}>
+                  <Ionicons name="time" size={24} color="#d97706" />
+                </View>
+                <View style={styles.metricContent}>
+                  <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'in_progress').length}</Text>
+                  <Text style={styles.metricLabel}>In Progress</Text>
+                </View>
+              </View>
+
+              <View style={styles.metricCard}>
+                <View style={styles.metricIcon}>
+                  <Ionicons name="alert-circle" size={24} color="#dc2626" />
+                </View>
+                <View style={styles.metricContent}>
+                  <Text style={styles.metricValue}>{jobs.filter(j => j.priority === 'emergency').length}</Text>
+                  <Text style={styles.metricLabel}>Urgent</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Quick Actions */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Create New Job</Text>
-            <TouchableOpacity
-              style={styles.voiceButton}
-              onPress={() => setShowVoiceInput(true)}
-            >
-              <Ionicons name="mic" size={20} color="white" />
-              <Text style={styles.voiceButtonText}>Speak Job Details</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.actionGrid}>
+              <TouchableOpacity
+                style={styles.primaryAction}
+                onPress={() => setShowVoiceInput(true)}
+              >
+                <View style={styles.actionIcon}>
+                  <Ionicons name="mic" size={28} color="white" />
+                </View>
+                <Text style={styles.primaryActionText}>Create Job</Text>
+                <Text style={styles.primaryActionSubtext}>Voice-guided job creation</Text>
+              </TouchableOpacity>
+
+              <View style={styles.secondaryActions}>
+                <TouchableOpacity style={styles.secondaryAction}>
+                  <Ionicons name="calendar" size={20} color="#1a365d" />
+                  <Text style={styles.secondaryActionText}>Schedule</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.secondaryAction}>
+                  <Ionicons name="map" size={20} color="#1a365d" />
+                  <Text style={styles.secondaryActionText}>Routes</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.secondaryAction}>
+                  <Ionicons name="people" size={20} color="#1a365d" />
+                  <Text style={styles.secondaryActionText}>Teams</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.secondaryAction}>
+                  <Ionicons name="stats-chart" size={20} color="#1a365d" />
+                  <Text style={styles.secondaryActionText}>Reports</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Jobs List */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Today's Jobs</Text>
+              <TouchableOpacity style={styles.filterButton}>
+                <Ionicons name="filter" size={16} color="#64748b" />
+                <Text style={styles.filterText}>Filter</Text>
+              </TouchableOpacity>
+            </View>
+
+            {jobs.length > 0 ? (
+              <View style={styles.jobsList}>
+                {jobs.map((job) => (
+                  <View key={job.id} style={styles.jobCard}>
+                    <View style={styles.jobHeader}>
+                      <View style={styles.jobInfo}>
+                        <Text style={styles.jobTitle}>{job.title}</Text>
+                        <Text style={styles.jobClient}>{job.clientName}</Text>
+                      </View>
+                      <View style={[
+                        styles.priorityBadge,
+                        job.priority === 'emergency' ? styles.priorityUrgent :
+                          job.priority === 'high' ? styles.priorityHigh :
+                            styles.priorityNormal
+                      ]}>
+                        <Text style={styles.priorityText}>
+                          {job.priority?.toUpperCase() || 'NORMAL'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.jobDetails}>
+                      <View style={styles.jobDetail}>
+                        <Ionicons name="location" size={16} color="#64748b" />
+                        <Text style={styles.jobAddress}>{job.location}</Text>
+                      </View>
+                      <View style={styles.jobDetail}>
+                        <Ionicons name="time" size={16} color="#64748b" />
+                        <Text style={styles.jobTime}>
+                          {new Date(job.scheduledDate).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.jobActions}>
+                      <TouchableOpacity style={styles.jobAction}>
+                        <Ionicons name="call" size={16} color="#2563eb" />
+                        <Text style={styles.jobActionText}>Call</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.jobAction}>
+                        <Ionicons name="navigate" size={16} color="#2563eb" />
+                        <Text style={styles.jobActionText}>Navigate</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[
+                        styles.jobAction,
+                        styles.jobActionPrimary
+                      ]}>
+                        <Text style={styles.jobActionPrimaryText}>Start Job</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar" size={48} color="#cbd5e1" />
+                <Text style={styles.emptyTitle}>No jobs scheduled</Text>
+                <Text style={styles.emptySubtitle}>Create a new job to get started</Text>
+              </View>
+            )}
           </View>
 
           {/* Voice Input Modal */}
@@ -231,89 +403,374 @@ export default function SchedulingComponent({ isVisible, onClose, onJobCreated }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  closeButton: {
-    padding: 8,
+    backgroundColor: '#f8fafc',
   },
   content: {
     flex: 1,
-    padding: 16,
   },
-  section: {
-    marginBottom: 24,
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    elevation: 2,
+
+  // Professional Header
+  professionalHeader: {
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    paddingTop: 50,
+    paddingBottom: 16,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+  headerText: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a365d',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  addButton: {
+    backgroundColor: '#2563eb',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+
+  // Dashboard Section
+  dashboardSection: {
+    padding: 20,
+    backgroundColor: '#ffffff',
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  metricIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  metricContent: {
+    flex: 1,
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: -0.5,
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+
+  // Sections
+  section: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  voiceButton: {
+  filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#f1f5f9',
     borderRadius: 8,
-    justifyContent: 'center',
   },
-  voiceButtonText: {
-    color: 'white',
+  filterText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+
+  // Quick Actions
+  actionGrid: {
+    gap: 16,
+  },
+  primaryAction: {
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  actionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  primaryActionText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  primaryActionSubtext: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  secondaryAction: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  secondaryActionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#475569',
+    marginTop: 4,
+  },
+
+  // Jobs List
+  jobsList: {
+    gap: 12,
+  },
+  jobCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  jobHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  jobInfo: {
+    flex: 1,
+  },
+  jobTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  jobClient: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  priorityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  priorityUrgent: {
+    backgroundColor: '#dc2626',
+  },
+  priorityHigh: {
+    backgroundColor: '#d97706',
+  },
+  priorityNormal: {
+    backgroundColor: '#059669',
+  },
+  priorityText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  jobDetails: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  jobDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  jobAddress: {
+    fontSize: 14,
+    color: '#64748b',
+    marginLeft: 8,
+    flex: 1,
+  },
+  jobTime: {
+    fontSize: 14,
+    color: '#64748b',
     marginLeft: 8,
   },
+  jobActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  jobAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  jobActionPrimary: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  jobActionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#2563eb',
+    marginLeft: 4,
+  },
+  jobActionPrimaryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#475569',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    lineHeight: 20,
+  },
+
+  // Voice Input (keeping existing styles for modal)
   voiceInputContainer: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#f8fafc',
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   voiceInputTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#1e293b',
     marginBottom: 8,
   },
   voiceInputExample: {
     fontSize: 12,
-    color: '#666',
+    color: '#64748b',
     fontStyle: 'italic',
     marginBottom: 12,
   },
   voiceInputField: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
     padding: 12,
     fontSize: 14,
     minHeight: 80,
@@ -330,117 +787,87 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   cancelButton: {
-    backgroundColor: '#8E8E93',
+    backgroundColor: '#94a3b8',
   },
   createButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#2563eb',
   },
   cancelButtonText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   createButtonText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
+
+  // Missing styles
   emptyText: {
     textAlign: 'center',
-    color: '#666',
+    color: '#64748b',
+    fontSize: 16,
     fontStyle: 'italic',
-  },
-  jobCard: {
-    backgroundColor: '#f8f8f8',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
-  },
-  jobHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  jobTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  priorityBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  priorityText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
+    marginVertical: 20,
   },
   jobLocation: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
-  },
-  jobClient: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  jobDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  jobDetail: {
-    fontSize: 11,
-    color: '#666',
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 4,
   },
   statusBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
+    borderRadius: 12,
   },
   statusText: {
     color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontSize: 12,
+    fontWeight: '600',
   },
   technicianSchedule: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 6,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   technicianName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
     marginBottom: 8,
   },
   noJobs: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: '#64748b',
     fontStyle: 'italic',
   },
   scheduleJob: {
-    backgroundColor: '#fff',
-    padding: 8,
-    borderRadius: 4,
-    marginBottom: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    marginBottom: 8,
   },
   scheduleJobTime: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
+    fontSize: 14,
+    color: '#1e293b',
+    fontWeight: '500',
   },
   scheduleJobLocation: {
-    fontSize: 11,
-    color: '#666',
+    fontSize: 12,
+    color: '#64748b',
   },
 });

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { VisionAnalysisResult, VisionService } from '../services/visionService';
 
 interface CameraGaugeReaderProps {
@@ -13,6 +13,8 @@ interface CameraGaugeReaderProps {
 export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeReaderProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<VisionAnalysisResult | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const visionService = new VisionService(process.env.OPENAI_API_KEY || 'your-api-key-here');
 
@@ -22,11 +24,23 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
     }
   }, [permission, requestPermission]);
 
+  const handleSaveResult = () => {
+    if (analysisResult) {
+      onGaugeRead(analysisResult);
+      onClose();
+    }
+  };
+
+  const handleRetake = () => {
+    setShowResults(false);
+    setAnalysisResult(null);
+  };
+
   const captureGauge = async () => {
     if (!cameraRef.current || !permission?.granted) return;
 
     setIsProcessing(true);
-    
+
     try {
       // Capture the image
       const photo = await cameraRef.current.takePictureAsync({
@@ -50,13 +64,13 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
 
       // Use vision service for gauge reading and corrosion detection
       const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here';
-      const analysis = hasApiKey 
+      const analysis = hasApiKey
         ? await visionService.analyzeGaugeImage(processedImage.base64!)
         : await visionService.mockAnalyzeGaugeImage(processedImage.base64!);
-      
-      onGaugeRead(analysis);
-      onClose();
-      
+
+      setAnalysisResult(analysis);
+      setShowResults(true);
+
     } catch (error) {
       console.error('Error capturing gauge:', error);
       Alert.alert('Error', 'Failed to capture gauge reading. Please try again.');
@@ -65,17 +79,102 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
     }
   };
 
+  if (showResults && analysisResult) {
+    return (
+      <View style={styles.resultsContainer}>
+        {/* Results Header */}
+        <View style={styles.resultsHeader}>
+          <View style={styles.resultsHeaderLeft}>
+            <TouchableOpacity onPress={handleRetake} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#64748b" />
+            </TouchableOpacity>
+            <View style={styles.resultsHeaderText}>
+              <Text style={styles.resultsTitle}>Analysis Results</Text>
+              <Text style={styles.resultsSubtitle}>Gauge reading and corrosion detection</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Results Content */}
+        <ScrollView style={styles.resultsContent}>
+          {/* Image Section */}
+          <View style={styles.imageSection}>
+            <Text style={styles.sectionTitle}>Captured Image</Text>
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: `data:image/jpeg;base64,${analysisResult.imageBase64}` }} style={styles.scannedImage} />
+            </View>
+          </View>
+
+          {/* Analysis Results */}
+          <View style={styles.analysisSection}>
+            <Text style={styles.sectionTitle}>Analysis Results</Text>
+
+            {/* Pressure Reading */}
+            <View style={styles.resultCard}>
+              <View style={styles.resultHeader}>
+                <Ionicons name="speedometer" size={20} color="#2563eb" />
+                <Text style={styles.resultTitle}>Pressure Reading</Text>
+              </View>
+              <Text style={styles.pressureValue}>{analysisResult.pressure} PSI</Text>
+              <Text style={styles.confidenceText}>Confidence: {Math.round(analysisResult.confidence * 100)}%</Text>
+            </View>
+
+            {/* Gauge Type */}
+            <View style={styles.resultCard}>
+              <View style={styles.resultHeader}>
+                <Ionicons name="hardware-chip" size={20} color="#2563eb" />
+                <Text style={styles.resultTitle}>Gauge Type</Text>
+              </View>
+              <Text style={styles.gaugeType}>{analysisResult.gaugeType}</Text>
+            </View>
+
+            {/* Corrosion Status */}
+            <View style={styles.resultCard}>
+              <View style={styles.resultHeader}>
+                <Ionicons name="warning" size={20} color={analysisResult.corrosion.detected ? '#dc2626' : '#16a34a'} />
+                <Text style={styles.resultTitle}>Corrosion Detection</Text>
+              </View>
+              <Text style={styles.corrosionStatus}>
+                {analysisResult.corrosion.detected ? 'Corrosion Detected' : 'No Corrosion Found'}
+              </Text>
+              <Text style={styles.confidenceText}>Confidence: {Math.round(analysisResult.corrosion.confidence * 100)}%</Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionsSection}>
+            <TouchableOpacity onPress={handleSaveResult} style={styles.primaryAction}>
+              <Ionicons name="checkmark-circle" size={20} color="white" />
+              <Text style={styles.primaryActionText}>Save Reading</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleRetake} style={styles.secondaryAction}>
+              <Ionicons name="camera-reverse" size={20} color="#64748b" />
+              <Text style={styles.secondaryActionText}>Retake Photo</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   if (!permission) {
     return <View style={styles.container} />;
   }
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.button}>
-          <Text style={styles.buttonText}>Grant permission</Text>
-        </TouchableOpacity>
+      <View style={styles.permissionContainer}>
+        <View style={styles.permissionCard}>
+          <Ionicons name="camera" size={64} color="#cbd5e1" />
+          <Text style={styles.permissionTitle}>Camera Access Required</Text>
+          <Text style={styles.permissionSubtitle}>
+            We need camera permission to scan pressure gauges and detect corrosion.
+          </Text>
+          <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
+            <Text style={styles.permissionButtonText}>Grant Permission</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -83,37 +182,51 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
   return (
     <View style={styles.container}>
       <CameraView style={styles.camera} ref={cameraRef}>
-        <View style={styles.overlay}>
-          <View style={styles.header}>
+        {/* Professional Header Overlay */}
+        <View style={styles.headerOverlay}>
+          <View style={styles.headerContent}>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="white" />
             </TouchableOpacity>
-            <Text style={styles.title}>Gauge Reader</Text>
-            <View style={styles.placeholder} />
+            <Text style={styles.headerTitle}>Gauge Scanner</Text>
+            <TouchableOpacity style={styles.flashButton}>
+              <Ionicons name="flash" size={20} color="white" />
+            </TouchableOpacity>
           </View>
-          
-          <View style={styles.targetArea}>
+        </View>
+
+        {/* Target Guide */}
+        <View style={styles.targetOverlay}>
+          <View style={styles.targetContainer}>
             <View style={styles.targetBox}>
               <View style={styles.targetCorner} />
-              <View style={[styles.targetCorner, { top: 0, right: 0 }]} />
-              <View style={[styles.targetCorner, { bottom: 0, left: 0 }]} />
-              <View style={[styles.targetCorner, { bottom: 0, right: 0 }]} />
-              <Text style={styles.targetText}>Align gauge within frame</Text>
+              <View style={[styles.targetCorner, { top: 0, right: 0, transform: [{ rotate: '90deg' }] }]} />
+              <View style={[styles.targetCorner, { bottom: 0, left: 0, transform: [{ rotate: '270deg' }] }]} />
+              <View style={[styles.targetCorner, { bottom: 0, right: 0, transform: [{ rotate: '180deg' }] }]} />
             </View>
+            <Text style={styles.targetText}>Position gauge in center</Text>
           </View>
-          
-          <View style={styles.footer}>
+        </View>
+
+        {/* Bottom Controls */}
+        <View style={styles.controlsOverlay}>
+          <View style={styles.controlsContent}>
             <TouchableOpacity
-              onPress={captureGauge}
               style={[styles.captureButton, isProcessing && styles.captureButtonDisabled]}
+              onPress={captureGauge}
               disabled={isProcessing}
             >
-              {isProcessing ? (
-                <Text style={styles.captureButtonText}>Processing...</Text>
-              ) : (
-                <Ionicons name="camera" size={32} color="white" />
-              )}
+              <View style={styles.captureButtonInner}>
+                {isProcessing ? (
+                  <Ionicons name="hourglass" size={24} color="white" />
+                ) : (
+                  <Ionicons name="camera" size={24} color="white" />
+                )}
+              </View>
             </TouchableOpacity>
+            <Text style={styles.captureHint}>
+              {isProcessing ? 'Analyzing...' : 'Tap to scan gauge'}
+            </Text>
           </View>
         </View>
       </CameraView>
@@ -124,108 +237,335 @@ export default function CameraGaugeReader({ onGaugeRead, onClose }: CameraGaugeR
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: '#000',
   },
   camera: {
     flex: 1,
   },
-  overlay: {
+
+  // Permission Screen
+  permissionContainer: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  header: {
+  permissionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  permissionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  permissionSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  permissionButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  permissionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Camera Overlays
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingTop: 50,
+    paddingBottom: 16,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
   },
   closeButton: {
     padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
   },
-  title: {
+  headerTitle: {
     color: 'white',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  placeholder: {
-    width: 40,
+  flashButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
   },
-  targetArea: {
+
+  targetOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+  },
+  targetContainer: {
+    alignItems: 'center',
   },
   targetBox: {
     width: 250,
     height: 250,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: '#00FF00',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    marginBottom: 16,
   },
   targetCorner: {
     position: 'absolute',
-    width: 20,
-    height: 20,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
+    width: 24,
+    height: 24,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
     borderColor: '#00FF00',
     top: 0,
     left: 0,
   },
   targetText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 6,
+    borderRadius: 20,
   },
-  footer: {
-    justifyContent: 'center',
+
+  controlsOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingBottom: 40,
+    paddingTop: 20,
+  },
+  controlsContent: {
     alignItems: 'center',
-    paddingBottom: 50,
   },
   captureButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FF3B30',
+    marginBottom: 12,
+  },
+  captureButtonInner: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#2563eb',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowRadius: 8,
   },
   captureButtonDisabled: {
-    backgroundColor: '#8E8E93',
+    opacity: 0.6,
   },
-  captureButtonText: {
+  captureHint: {
     color: 'white',
     fontSize: 14,
-    fontWeight: 'bold',
-    paddingHorizontal: 12,
+    fontWeight: '500',
   },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 10,
-    color: 'white',
+
+  // Results Modal
+  resultsContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
   },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 12,
+  resultsHeader: {
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    paddingTop: 50,
+    paddingBottom: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  resultsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+  resultsHeaderText: {
+    flex: 1,
+  },
+  resultsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a365d',
+    letterSpacing: -0.5,
+  },
+  resultsSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+
+  resultsContent: {
+    flex: 1,
+    padding: 20,
+  },
+  imageSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  imageContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  scannedImage: {
+    width: '100%',
+    height: 200,
     borderRadius: 8,
   },
-  buttonText: {
+
+  analysisSection: {
+    marginBottom: 24,
+  },
+  resultCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  resultTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginLeft: 8,
+  },
+  pressureValue: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#2563eb',
+    letterSpacing: -0.5,
+  },
+  gaugeType: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#64748b',
+  },
+  corrosionStatus: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#64748b',
+  },
+  confidenceText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+
+  actionsSection: {
+    gap: 12,
+  },
+  primaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563eb',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  primaryActionText: {
     color: 'white',
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  secondaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  secondaryActionText: {
+    color: '#64748b',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
   },
 });

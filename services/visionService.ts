@@ -7,6 +7,7 @@ export interface VisionAnalysisResult {
     confidence: number;
   };
   gaugeType: 'analog' | 'digital';
+  imageBase64: string;
 }
 
 export class VisionService {
@@ -75,7 +76,7 @@ Respond in JSON format:
 
       const result = await response.json();
       const content = result.choices[0]?.message?.content;
-      
+
       if (!content) {
         throw new Error('No content received from vision API');
       }
@@ -87,12 +88,13 @@ Respond in JSON format:
       }
 
       const analysis = JSON.parse(jsonMatch[0]);
-      
+
       return {
         pressure: analysis.pressure || 0,
         confidence: analysis.confidence || 0,
         corrosion: analysis.corrosion || { detected: false, severity: 'none', confidence: 0 },
-        gaugeType: analysis.gaugeType || 'analog'
+        gaugeType: analysis.gaugeType || 'analog',
+        imageBase64: imageBase64
       };
 
     } catch (error) {
@@ -105,41 +107,46 @@ Respond in JSON format:
   async mockAnalyzeGaugeImage(imageBase64: string): Promise<VisionAnalysisResult> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Generate realistic gauge readings with corrosion detection
     const mockReadings = [
-      { 
-        pressure: 55, 
+      {
+        pressure: 55,
         confidence: 0.92,
         corrosion: { detected: false, severity: 'none' as const, confidence: 0.95 },
-        gaugeType: 'analog' as const
+        gaugeType: 'analog' as const,
+        imageBase64: imageBase64
       },
-      { 
-        pressure: 58, 
+      {
+        pressure: 58,
         confidence: 0.89,
         corrosion: { detected: true, severity: 'minor' as const, confidence: 0.87 },
-        gaugeType: 'analog' as const
+        gaugeType: 'analog' as const,
+        imageBase64: imageBase64
       },
-      { 
-        pressure: 52, 
+      {
+        pressure: 52,
         confidence: 0.95,
         corrosion: { detected: false, severity: 'none' as const, confidence: 0.98 },
-        gaugeType: 'digital' as const
+        gaugeType: 'digital' as const,
+        imageBase64: imageBase64
       },
-      { 
-        pressure: 60, 
+      {
+        pressure: 60,
         confidence: 0.87,
         corrosion: { detected: true, severity: 'moderate' as const, confidence: 0.82 },
-        gaugeType: 'analog' as const
+        gaugeType: 'analog' as const,
+        imageBase64: imageBase64
       },
-      { 
-        pressure: 48, 
+      {
+        pressure: 48,
         confidence: 0.91,
         corrosion: { detected: true, severity: 'severe' as const, confidence: 0.94 },
-        gaugeType: 'analog' as const
+        gaugeType: 'analog' as const,
+        imageBase64: imageBase64
       },
     ];
-    
+
     return mockReadings[Math.floor(Math.random() * mockReadings.length)];
   }
 }
