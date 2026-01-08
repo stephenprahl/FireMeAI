@@ -6,9 +6,10 @@ import { Client, ClientManagementService, ServiceHistory } from '../services/cli
 interface ClientManagementProps {
   isVisible: boolean;
   onClose: () => void;
+  useModal?: boolean; // New prop to control modal usage
 }
 
-export default function ClientManagementComponent({ isVisible, onClose }: ClientManagementProps) {
+export default function ClientManagementComponent({ isVisible, onClose, useModal = true }: ClientManagementProps) {
   const [clientService] = useState(() => new ClientManagementService());
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -168,7 +169,7 @@ export default function ClientManagementComponent({ isVisible, onClose }: Client
     </View>
   );
 
-  return (
+  return useModal ? (
     <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
         {/* Professional Header */}
@@ -353,6 +354,171 @@ export default function ClientManagementComponent({ isVisible, onClose }: Client
         )}
       </View>
     </Modal>
+  ) : (
+    <View style={styles.container}>
+      <ScrollView style={[styles.content, { paddingBottom: 80 }]}>
+        {/* Enhanced Stats Dashboard */}
+        {stats && (
+          <View style={styles.statsSection}>
+            <Text style={styles.sectionTitle}>Overview</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <View style={styles.statIcon}>
+                  <Ionicons name="people" size={24} color="#2563eb" />
+                </View>
+                <View style={styles.statContent}>
+                  <Text style={styles.statValue}>{stats.totalClients}</Text>
+                  <Text style={styles.statLabel}>Total Clients</Text>
+                </View>
+              </View>
+
+              <View style={styles.statCard}>
+                <View style={styles.statIcon}>
+                  <Ionicons name="checkmark-circle" size={24} color="#059669" />
+                </View>
+                <View style={styles.statContent}>
+                  <Text style={styles.statValue}>{stats.activeClients}</Text>
+                  <Text style={styles.statLabel}>Active</Text>
+                </View>
+              </View>
+
+              <View style={styles.statCard}>
+                <View style={styles.statIcon}>
+                  <Ionicons name="warning" size={24} color="#d97706" />
+                </View>
+                <View style={styles.statContent}>
+                  <Text style={styles.statValue}>{stats.overdueServices}</Text>
+                  <Text style={styles.statLabel}>Overdue</Text>
+                </View>
+              </View>
+
+              <View style={styles.statCard}>
+                <View style={styles.statIcon}>
+                  <Ionicons name="calendar" size={24} color="#7c3aed" />
+                </View>
+                <View style={styles.statContent}>
+                  <Text style={styles.statValue}>{stats.upcomingServices}</Text>
+                  <Text style={styles.statLabel}>Upcoming</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Enhanced Search */}
+        <View style={styles.searchSection}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search clients by name, address, or contact..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#64748b" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Professional Tab Navigation */}
+        <View style={styles.tabSection}>
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'all' && styles.tabActive]}
+              onPress={() => handleTabChange('all')}
+            >
+              <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>All Clients</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
+              onPress={() => handleTabChange('upcoming')}
+            >
+              <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>Upcoming</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'overdue' && styles.tabActive]}
+              onPress={() => handleTabChange('overdue')}
+            >
+              <Text style={[styles.tabText, activeTab === 'overdue' && styles.tabTextActive]}>Overdue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Client List */}
+        <View style={styles.clientListSection}>
+          <FlatList
+            data={clients}
+            renderItem={renderClientItem}
+            keyExtractor={(item) => item.id}
+            style={styles.clientList}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Ionicons name="people" size={48} color="#cbd5e1" />
+                <Text style={styles.emptyTitle}>No clients found</Text>
+                <Text style={styles.emptySubtitle}>
+                  {searchQuery ? 'Try adjusting your search terms' : 'Add your first client to get started'}
+                </Text>
+              </View>
+            }
+          />
+        </View>
+      </ScrollView>
+
+      {/* Client Detail Modal */}
+      {selectedClient && (
+        <Modal visible={!!selectedClient} animationType="slide">
+          <View style={styles.detailContainer}>
+            <View style={styles.detailHeader}>
+              <Text style={styles.detailTitle}>{selectedClient.name}</Text>
+              <TouchableOpacity onPress={() => setSelectedClient(null)} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.detailContent}>
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionTitle}>Contact Information</Text>
+                <Text style={styles.detailText}>{selectedClient.address}</Text>
+                <Text style={styles.detailText}>{selectedClient.city}, {selectedClient.state} {selectedClient.zipCode}</Text>
+                <Text style={styles.detailText}>Phone: {selectedClient.phone}</Text>
+                {selectedClient.email && <Text style={styles.detailText}>Email: {selectedClient.email}</Text>}
+                <Text style={styles.detailText}>Contact: {selectedClient.contactPerson}</Text>
+                {selectedClient.contactTitle && <Text style={styles.detailText}>{selectedClient.contactTitle}</Text>}
+              </View>
+
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionTitle}>Service Information</Text>
+                <Text style={styles.detailText}>Industry: {selectedClient.industry}</Text>
+                <Text style={styles.detailText}>Service Frequency: {selectedClient.serviceFrequency.replace('_', ' ')}</Text>
+                {selectedClient.lastInspectionDate && (
+                  <Text style={styles.detailText}>Last Inspection: {formatDate(selectedClient.lastInspectionDate)}</Text>
+                )}
+                {selectedClient.nextInspectionDate && (
+                  <Text style={styles.detailText}>Next Inspection: {formatDate(selectedClient.nextInspectionDate)}</Text>
+                )}
+              </View>
+
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionTitle}>Service History</Text>
+                <FlatList
+                  data={serviceHistory}
+                  renderItem={renderServiceHistoryItem}
+                  keyExtractor={(item) => item.id}
+                  ListEmptyComponent={
+                    <Text style={styles.emptyText}>No service history available</Text>
+                  }
+                />
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
+      )}
+    </View>
   );
 }
 

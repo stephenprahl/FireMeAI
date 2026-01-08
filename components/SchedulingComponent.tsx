@@ -113,25 +113,29 @@ export default function SchedulingComponent({ isVisible, onClose, onJobCreated, 
 
   const renderContent = () => (
     <View style={styles.container}>
-      {/* Professional Header */}
-      <View style={styles.professionalHeader}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={onClose} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#1a365d" />
-            </TouchableOpacity>
-            <View style={styles.headerText}>
-              <Text style={styles.headerTitle}>Scheduling & Dispatch</Text>
-              <Text style={styles.headerSubtitle}>Manage inspections and jobs</Text>
+      {!useModal && (
+        <>
+          {/* Professional Header */}
+          <View style={styles.professionalHeader}>
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <TouchableOpacity onPress={onClose} style={styles.backButton}>
+                  <Ionicons name="arrow-back" size={24} color="#1a365d" />
+                </TouchableOpacity>
+                <View style={styles.headerText}>
+                  <Text style={styles.headerTitle}>Scheduling & Dispatch</Text>
+                  <Text style={styles.headerSubtitle}>Manage inspections and jobs</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.addButton} onPress={() => setShowVoiceInput(true)}>
+                <Ionicons name="add" size={20} color="white" />
+              </TouchableOpacity>
             </View>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => setShowVoiceInput(true)}>
-            <Ionicons name="add" size={20} color="white" />
-          </TouchableOpacity>
-        </View>
-      </View>
+        </>
+      )}
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={[styles.content, !useModal && { paddingBottom: 80 }]}>
         {/* Dashboard Overview */}
         <View style={styles.dashboardSection}>
           <Text style={styles.sectionTitle}>Today's Overview</Text>

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CameraGaugeReader from '../components/CameraGaugeReader';
+import ClientManagementComponent from '../components/ClientManagementComponent';
 import SchedulingComponent from '../components/SchedulingComponent';
 import { AIAgentService } from '../services/aiAgentService';
 import { DatabaseService } from '../services/databaseService';
@@ -31,7 +32,6 @@ export default function Index() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showScheduling, setShowScheduling] = useState(false);
-  const [showClientManagement, setShowClientManagement] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [complianceStatus, setComplianceStatus] = useState<'compliant' | 'non_compliant' | 'requires_attention' | null>(null);
   const [inspectionCount, setInspectionCount] = useState(0);
@@ -250,7 +250,7 @@ export default function Index() {
       case 'home':
         return (
           <View style={{ flex: 1 }}>
-            <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
               <View style={styles.dashboardSection}>
                 <Text style={styles.sectionTitle}>Dashboard</Text>
                 <View style={styles.metricsGrid}>
@@ -359,19 +359,11 @@ export default function Index() {
 
       case 'clients':
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Client Management</Text>
-            <Pressable
-              style={styles.primaryAction}
-              onPress={() => setShowClientManagement(true)}
-            >
-              <View style={styles.actionIcon}>
-                <Ionicons name="people" size={28} color="white" />
-              </View>
-              <Text style={styles.primaryActionText}>Open Clients</Text>
-              <Text style={styles.primaryActionSubtext}>Manage client relationships</Text>
-            </Pressable>
-          </View>
+          <ClientManagementComponent
+            isVisible={true}
+            onClose={() => setActiveTab('home')}
+            useModal={false}
+          />
         );
 
       case 'alerts':
