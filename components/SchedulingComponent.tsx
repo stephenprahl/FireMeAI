@@ -138,7 +138,7 @@ export default function SchedulingComponent({ isVisible, onClose, onJobCreated, 
       <ScrollView style={[styles.content, !useModal && { paddingBottom: 80 }]}>
         {/* Dashboard Overview */}
         <View style={styles.dashboardSection}>
-          <Text style={styles.sectionTitle}>Today's Overview</Text>
+          <Text style={styles.sectionTitle}>Today&apos;s Overview</Text>
           <View style={styles.metricsGrid}>
             <View style={styles.metricCard}>
               <View style={styles.metricIcon}>

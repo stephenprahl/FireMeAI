@@ -8,7 +8,7 @@ import { NFPAInspection } from './types/nfpa';
 const sampleInspection: NFPAInspection = {
   id: 'test_inspection_001',
   timestamp: new Date(),
-  location: 'K&E Fire - Test Site A',
+  location: 'P&R Mechanical - Test Site A',
   technician: 'Test Technician',
   risers: [
     {

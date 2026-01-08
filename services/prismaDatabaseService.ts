@@ -25,7 +25,7 @@ export class PrismaDatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     // Create inspections table
-    await this.db.execAsync(`
+    await this.db.runAsync(`
       CREATE TABLE IF NOT EXISTS inspections (
         id TEXT PRIMARY KEY,
         timestamp TEXT NOT NULL,
@@ -40,7 +40,7 @@ export class PrismaDatabaseService {
     `);
 
     // Create risers table
-    await this.db.execAsync(`
+    await this.db.runAsync(`
       CREATE TABLE IF NOT EXISTS risers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         inspection_id TEXT NOT NULL,
@@ -55,7 +55,7 @@ export class PrismaDatabaseService {
     `);
 
     // Create gauge_readings table
-    await this.db.execAsync(`
+    await this.db.runAsync(`
       CREATE TABLE IF NOT EXISTS gauge_readings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         riser_id INTEGER NOT NULL,
@@ -68,7 +68,7 @@ export class PrismaDatabaseService {
     `);
 
     // Create transcriptions table
-    await this.db.execAsync(`
+    await this.db.runAsync(`
       CREATE TABLE IF NOT EXISTS transcriptions (
         id TEXT PRIMARY KEY,
         audio_file TEXT NOT NULL,
@@ -82,7 +82,7 @@ export class PrismaDatabaseService {
     `);
 
     // Create jobs table
-    await this.db.execAsync(`
+    await this.db.runAsync(`
       CREATE TABLE IF NOT EXISTS jobs (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,

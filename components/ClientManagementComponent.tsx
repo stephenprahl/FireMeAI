@@ -190,7 +190,7 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
           </View>
         </View>
 
-        <ScrollView style={styles.content}>
+        <View style={styles.content}>
           {/* Enhanced Stats Dashboard */}
           {stats && (
             <View style={styles.statsSection}>
@@ -301,7 +301,7 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
               }
             />
           </View>
-        </ScrollView>
+        </View>
 
         {/* Client Detail Modal */}
         {selectedClient && (
@@ -356,7 +356,7 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
     </Modal>
   ) : (
     <View style={styles.container}>
-      <ScrollView style={[styles.content, { paddingBottom: 80 }]}>
+      <View style={[styles.content, { paddingBottom: 80 }]}>
         {/* Enhanced Stats Dashboard */}
         {stats && (
           <View style={styles.statsSection}>
@@ -467,7 +467,7 @@ export default function ClientManagementComponent({ isVisible, onClose, useModal
             }
           />
         </View>
-      </ScrollView>
+      </View>
 
       {/* Client Detail Modal */}
       {selectedClient && (

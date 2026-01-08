@@ -1,37 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CameraGaugeReader from '../components/CameraGaugeReader';
 import ClientManagementComponent from '../components/ClientManagementComponent';
 import SchedulingComponent from '../components/SchedulingComponent';
-import { AIAgentService } from '../services/aiAgentService';
 import { DatabaseService } from '../services/databaseService';
-import { LangGraphAgentService } from '../services/langGraphAgentService';
-import { NotificationService } from '../services/notificationService';
 import { PDFService } from '../services/pdfService';
 import { PrismaDatabaseService } from '../services/prismaDatabaseService';
 import { SyncService } from '../services/syncService';
 import { VisionAnalysisResult } from '../services/visionService';
-import { WhisperService } from '../services/whisperService';
 import { NFPAInspection } from '../types/nfpa';
 
 export default function Index() {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [transcription, setTranscription] = useState('');
+  const insets = useSafeAreaInsets();
   const [inspection, setInspection] = useState<NFPAInspection | null>(null);
-  const [missingFields, setMissingFields] = useState<string[]>([]);
 
-  const whisperService = new WhisperService(process.env.OPENAI_API_KEY || 'your-api-key-here');
-  const aiAgentService = new AIAgentService();
   const pdfService = new PDFService();
   const databaseService = new DatabaseService();
   const prismaDatabaseService = new PrismaDatabaseService();
   const syncService = new SyncService(prismaDatabaseService);
-  const langGraphAgent = new LangGraphAgentService();
-  const notificationService = NotificationService.getInstance();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
-  const [showScheduling, setShowScheduling] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [complianceStatus, setComplianceStatus] = useState<'compliant' | 'non_compliant' | 'requires_attention' | null>(null);
   const [inspectionCount, setInspectionCount] = useState(0);
@@ -44,9 +33,6 @@ export default function Index() {
         // Initialize both databases for comparison
         await databaseService.initializeDatabase();
         await prismaDatabaseService.initializeDatabase();
-
-        // Initialize notification service
-        await notificationService.initialize();
 
         // Load inspection count
         const inspections = await prismaDatabaseService.findManyInspections();
@@ -62,77 +48,6 @@ export default function Index() {
 
     initializeApp();
   }, []);
-
-  const handleRecordingComplete = async (audioUri: string) => {
-    setIsProcessing(true);
-    setTranscription('');
-    setInspection(null);
-    setMissingFields([]);
-
-    try {
-      // Use real Whisper API transcription if API key is available, otherwise use mock
-      const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here';
-      const transcriptionResult = hasApiKey
-        ? await whisperService.transcribeAudio(audioUri)
-        : await whisperService.mockTranscribeAudio(audioUri);
-
-      setTranscription(transcriptionResult.text);
-
-      // Use advanced LangGraph agent for processing
-      const agentResponse = await langGraphAgent.processInspectionInput(
-        transcriptionResult.text,
-        inspection || undefined
-      );
-
-      setMissingFields(agentResponse.missingCriticalFields);
-      setComplianceStatus(agentResponse.overallStatus);
-
-      // Create inspection object from enhanced parsing
-      const newInspection = aiAgentService.createInspectionFromParsedData(
-        agentResponse.parsedData,
-        'Field Technician', // This would come from user profile
-        'K&E Fire - Site A' // This would come from job selection
-      );
-      setInspection(newInspection);
-
-      // Save to offline database (using Prisma service)
-      await prismaDatabaseService.createInspection(newInspection);
-      setInspectionCount(prev => prev + 1);
-
-      // Update sync status
-      const status = await syncService.getSyncStatus();
-      setSyncStatus({
-        isOnline: status.isOnline,
-        pendingCount: status.pendingInspections + status.pendingTranscriptions
-      });
-
-      // Show compliance status and follow-up questions
-      if (agentResponse.followUpQuestions.length > 0) {
-        const criticalQuestions = agentResponse.followUpQuestions.filter(q => q.priority === 'critical');
-        const questionText = criticalQuestions.length > 0
-          ? criticalQuestions.map(q => q.question).join('\n\n')
-          : agentResponse.followUpQuestions.slice(0, 3).map(q => q.question).join('\n\n');
-
-        Alert.alert(
-          agentResponse.overallStatus === 'non_compliant' ? 'Compliance Issues Found' : 'Additional Information Needed',
-          questionText,
-          [{ text: 'OK', onPress: () => { } }]
-        );
-      }
-
-      // Show overall compliance status
-      if (agentResponse.overallStatus === 'compliant') {
-        Alert.alert('✅ Compliant', 'Inspection meets all NFPA requirements. Ready for PDF generation.');
-      } else if (agentResponse.overallStatus === 'non_compliant') {
-        Alert.alert('❌ Non-Compliant', 'Critical issues found that must be addressed.');
-      }
-    } catch (error) {
-      console.error('Error processing audio:', error);
-      Alert.alert('Error', 'Failed to process audio. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleGaugeRead = (reading: VisionAnalysisResult) => {
     const corrosionMessage = reading.corrosion.detected
@@ -190,56 +105,6 @@ export default function Index() {
     }
   };
 
-  const handleGenerateSamplePDF = async () => {
-    setIsGeneratingPDF(true);
-    try {
-      const pdfUri = await pdfService.generateSamplePDF();
-
-      Alert.alert(
-        'Sample PDF Generated',
-        'A sample NFPA 25 inspection report has been generated for testing purposes.',
-        [
-          {
-            text: 'View Sample',
-            onPress: () => pdfService.sharePDF(pdfUri),
-          },
-          {
-            text: 'OK',
-            style: 'cancel',
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Error generating sample PDF:', error);
-      Alert.alert('Error', 'Failed to generate sample PDF. Please try again.');
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
-
-  const handleTestNotification = async () => {
-    try {
-      await notificationService.sendTestNotification();
-      Alert.alert('Test Sent', 'Test notification sent successfully!');
-    } catch (error) {
-      console.error('Error sending test notification:', error);
-      Alert.alert('Error', 'Failed to send test notification.');
-    }
-  };
-
-  const handleEmergencyAlert = async () => {
-    try {
-      await notificationService.sendEmergencyAlert(
-        '123 Main St, Office Building',
-        'Critical sprinkler system failure detected',
-        'John Smith'
-      );
-    } catch (error) {
-      console.error('Error sending emergency alert:', error);
-      Alert.alert('Error', 'Failed to send emergency alert.');
-    }
-  };
-
   const handleJobCreated = (job: any) => {
     // Handle new job creation - could update state or show notification
     Alert.alert('Job Created', `New job scheduled: ${job.title}`);
@@ -249,94 +114,119 @@ export default function Index() {
     switch (activeTab) {
       case 'home':
         return (
-          <View style={{ flex: 1 }}>
-            <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-              <View style={styles.dashboardSection}>
-                <Text style={styles.sectionTitle}>Dashboard</Text>
-                <View style={styles.metricsGrid}>
-                  <View style={styles.metricCard}>
-                    <View style={styles.metricIcon}>
-                      <Ionicons name="document-text" size={24} color="#2563eb" />
-                    </View>
-                    <View style={styles.metricContent}>
-                      <Text style={styles.metricValue}>{inspectionCount}</Text>
-                      <Text style={styles.metricLabel}>Inspections</Text>
-                    </View>
-                  </View>
-                  <View style={styles.metricCard}>
-                    <View style={styles.metricIcon}>
-                      <Ionicons name="cloud-done" size={24} color="#059669" />
-                    </View>
-                    <View style={styles.metricContent}>
-                      <Text style={styles.metricValue}>{syncStatus.isOnline ? 'Online' : 'Offline'}</Text>
-                      <Text style={styles.metricLabel}>Sync Status</Text>
-                    </View>
-                  </View>
-                  <View style={styles.metricCard}>
-                    <View style={styles.metricIcon}>
-                      <Ionicons name="cloud-upload" size={24} color="#f59e42" />
-                    </View>
-                    <View style={styles.metricContent}>
-                      <Text style={styles.metricValue}>{syncStatus.pendingCount}</Text>
-                      <Text style={styles.metricLabel}>Pending Sync</Text>
-                    </View>
+          <ScrollView style={{ flex: 1, backgroundColor: '#f8fafc' }} contentContainerStyle={{ paddingBottom: 100 }}>
+            {/* Professional Header */}
+            <View style={styles.professionalHeader}>
+              <View style={styles.headerContent}>
+                <View style={styles.companyInfo}>
+                  <Ionicons name="business" size={32} color="#2563eb" />
+                  <View style={styles.companyText}>
+                    <Text style={styles.companyName}>FireMe Pro</Text>
+                    <Text style={styles.companyTagline}>NFPA Inspection Management</Text>
                   </View>
                 </View>
+                <View style={styles.headerActions}>
+                  <TouchableOpacity style={styles.headerButton}>
+                    <Ionicons name="settings" size={24} color="#64748b" />
+                  </TouchableOpacity>
+                </View>
               </View>
+            </View>
 
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Recent Inspection</Text>
-                  {inspection && (
-                    <View style={[styles.statusCard, complianceStatus === 'compliant' ? styles.statusCompliant : complianceStatus === 'non_compliant' ? styles.statusNonCompliant : styles.statusWarning]}>
-                      <View style={styles.statusIcon}>
-                        <Ionicons name={complianceStatus === 'compliant' ? 'checkmark-circle' : complianceStatus === 'non_compliant' ? 'close-circle' : 'alert-circle'} size={32} color={complianceStatus === 'compliant' ? '#059669' : complianceStatus === 'non_compliant' ? '#dc2626' : '#f59e42'} />
-                      </View>
-                      <View style={styles.statusContent}>
-                        <Text style={styles.statusTitle}>{complianceStatus === 'compliant' ? 'Compliant' : complianceStatus === 'non_compliant' ? 'Non-Compliant' : 'Requires Attention'}</Text>
-                        <Text style={styles.statusSubtitle}>{inspection?.location || 'No location'}</Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-                {inspection ? (
-                  <View style={styles.riserCard}>
-                    <Text style={styles.riserTitle}>Technician: {inspection.technician}</Text>
-                    <Text style={styles.riserDetail}>Location: {inspection.location}</Text>
-                    <Text style={styles.riserDetail}>Date: {inspection.timestamp ? new Date(inspection.timestamp).toLocaleDateString() : 'N/A'}</Text>
-                    {/* System type not present in NFPAInspection, so omit or add custom logic if needed */}
-                    {missingFields.length > 0 && (
-                      <View>
-                        <Text style={styles.sectionTitle}>Missing Fields</Text>
-                        {missingFields.map((field, idx) => (
-                          <Text key={idx} style={styles.missingField}>{field}</Text>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                ) : (
-                  <Text style={styles.riserDetail}>No recent inspection data available.</Text>
-                )}
-              </View>
+            {/* Welcome Section */}
+            <View style={styles.welcomeSection}>
+              <Text style={styles.welcomeTitle}>Welcome back</Text>
+              <Text style={styles.welcomeSubtitle}>Ready to conduct your next inspection?</Text>
+            </View>
 
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Quick Actions</Text>
-                <View style={styles.actionGrid}>
-                  <Pressable style={styles.primaryAction} onPress={handleGeneratePDF} disabled={!inspection || isGeneratingPDF}>
-                    <View style={styles.actionIcon}>
-                      <Ionicons name="document" size={28} color="white" />
-                    </View>
-                    <Text style={styles.primaryActionText}>Generate PDF</Text>
-                    <Text style={styles.primaryActionSubtext}>Create NFPA inspection report</Text>
-                  </Pressable>
-                  <Pressable style={styles.sampleButton} onPress={handleGenerateSamplePDF} disabled={isGeneratingPDF}>
-                    <Ionicons name="document-outline" size={28} color="white" />
-                    <Text style={styles.primaryActionText}>Sample PDF</Text>
-                  </Pressable>
+            {/* Key Metrics */}
+            <View style={styles.metricsSection}>
+              <Text style={styles.sectionTitle}>Key Metrics</Text>
+              <View style={styles.metricsGrid}>
+                <View style={styles.metricCard}>
+                  <View style={styles.metricIcon}>
+                    <Ionicons name="document-text" size={28} color="#2563eb" />
+                  </View>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>{inspectionCount}</Text>
+                    <Text style={styles.metricLabel}>Total Inspections</Text>
+                  </View>
+                </View>
+                <View style={styles.metricCard}>
+                  <View style={styles.metricIcon}>
+                    <Ionicons name={syncStatus.isOnline ? "cloud-done" : "cloud-offline"} size={28} color={syncStatus.isOnline ? "#059669" : "#dc2626"} />
+                  </View>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>{syncStatus.isOnline ? 'Online' : 'Offline'}</Text>
+                    <Text style={styles.metricLabel}>Sync Status</Text>
+                  </View>
+                </View>
+                <View style={styles.metricCard}>
+                  <View style={styles.metricIcon}>
+                    <Ionicons name="time" size={28} color="#f59e42" />
+                  </View>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>{syncStatus.pendingCount}</Text>
+                    <Text style={styles.metricLabel}>Pending Sync</Text>
+                  </View>
+                </View>
+                <View style={styles.metricCard}>
+                  <View style={styles.metricIcon}>
+                    <Ionicons name="checkmark-circle" size={28} color="#059669" />
+                  </View>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>{complianceStatus === 'compliant' ? 'Good' : complianceStatus === 'non_compliant' ? 'Issues' : 'Check'}</Text>
+                    <Text style={styles.metricLabel}>Compliance</Text>
+                  </View>
                 </View>
               </View>
-            </ScrollView>
-          </View>
+            </View>
+
+            {/* Quick Actions */}
+            <View style={styles.actionsSection}>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
+              <View style={styles.actionGrid}>
+                <TouchableOpacity style={styles.primaryAction} onPress={() => setActiveTab('camera')}>
+                  <View style={styles.actionIcon}>
+                    <Ionicons name="camera" size={28} color="white" />
+                  </View>
+                  <Text style={styles.primaryActionText}>Start Inspection</Text>
+                  <Text style={styles.primaryActionSubtext}>Use camera for gauge reading</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.secondaryAction} onPress={() => setActiveTab('schedule')}>
+                  <Ionicons name="calendar" size={24} color="#2563eb" />
+                  <Text style={styles.secondaryActionText}>Schedule</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.secondaryAction} onPress={() => setActiveTab('clients')}>
+                  <Ionicons name="people" size={24} color="#2563eb" />
+                  <Text style={styles.secondaryActionText}>Clients</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.secondaryAction} onPress={handleGeneratePDF} disabled={!inspection}>
+                  <Ionicons name="document" size={24} color="#2563eb" />
+                  <Text style={styles.secondaryActionText}>Generate PDF</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Recent Activity */}
+            {inspection && (
+              <View style={styles.activitySection}>
+                <Text style={styles.sectionTitle}>Recent Activity</Text>
+                <View style={styles.activityItem}>
+                  <View style={styles.activityIcon}>
+                    <Ionicons name="document-text" size={20} color="#2563eb" />
+                  </View>
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityTitle}>Inspection Completed</Text>
+                    <Text style={styles.activitySubtitle}>{inspection.location} - {new Date(inspection.timestamp || Date.now()).toLocaleDateString()}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.activityAction}>
+                    <Text style={styles.activityActionText}>View</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </ScrollView>
         );
 
       case 'camera':
@@ -366,31 +256,6 @@ export default function Index() {
           />
         );
 
-      case 'alerts':
-        return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notifications & Alerts</Text>
-            <Pressable
-              style={styles.primaryAction}
-              onPress={handleEmergencyAlert}
-            >
-              <View style={styles.actionIcon}>
-                <Ionicons name="warning" size={28} color="white" />
-              </View>
-              <Text style={styles.primaryActionText}>Emergency Alert</Text>
-              <Text style={styles.primaryActionSubtext}>Send critical notifications</Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.secondaryAction, { marginTop: 16 }]}
-              onPress={handleTestNotification}
-            >
-              <Ionicons name="notifications" size={20} color="#1a365d" />
-              <Text style={styles.secondaryActionText}>Test Notification</Text>
-            </Pressable>
-          </View>
-        );
-
       default:
         return null;
     }
@@ -402,7 +267,7 @@ export default function Index() {
         {renderTabContent()}
       </View>
 
-      <View style={styles.professionalTabBar}>
+      <View style={[styles.professionalTabBar, { paddingBottom: Math.max(20, insets.bottom) }]}>
         <TouchableOpacity
           style={[styles.tabItem, activeTab === 'home' && styles.tabItemActive]}
           onPress={() => setActiveTab('home')}
@@ -433,14 +298,6 @@ export default function Index() {
         >
           <Ionicons name="people" size={20} color={activeTab === 'clients' ? '#2563eb' : '#64748b'} />
           <Text style={[styles.tabText, activeTab === 'clients' && styles.tabTextActive]}>Clients</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'alerts' && styles.tabItemActive]}
-          onPress={() => setActiveTab('alerts')}
-        >
-          <Ionicons name="warning" size={20} color={activeTab === 'alerts' ? '#2563eb' : '#64748b'} />
-          <Text style={[styles.tabText, activeTab === 'alerts' && styles.tabTextActive]}>Alerts</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -512,6 +369,81 @@ const styles = StyleSheet.create({
     padding: 8,
   },
 
+  // Welcome Section
+  welcomeSection: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+  },
+
+  // Metrics Section
+  metricsSection: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
+  // Actions Section
+  actionsSection: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
+  // Activity Section
+  activitySection: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
   // Dashboard Section
   dashboardSection: {
     padding: 20,
@@ -534,41 +466,42 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: '45%',
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   metricIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginBottom: 12,
   },
   metricContent: {
-    flex: 1,
+    alignItems: 'center',
   },
   metricValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#1e293b',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
+    marginBottom: 4,
   },
   metricLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748b',
-    fontWeight: '500',
-    marginTop: 2,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 14,
   },
 
   // Sections
@@ -842,7 +775,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    paddingBottom: 20,
     paddingTop: 12,
     elevation: 8,
     shadowColor: '#000',

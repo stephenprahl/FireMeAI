@@ -32,12 +32,6 @@ export default function TabLayout({ activeTab, onTabPress }: TabBarProps) {
             title: 'Clients',
             iconName: 'people-outline' as const,
             activeIconName: 'people' as const,
-        },
-        {
-            id: 'alerts',
-            title: 'Alerts',
-            iconName: 'notifications-outline' as const,
-            activeIconName: 'notifications' as const,
         }
     ];
 
