@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import CameraGaugeReader from '../components/CameraGaugeReader';
+import SchedulingComponent from '../components/SchedulingComponent';
 import { AIAgentService } from '../services/aiAgentService';
 import { DatabaseService } from '../services/databaseService';
 import { LangGraphAgentService } from '../services/langGraphAgentService';
@@ -238,6 +240,11 @@ export default function Index() {
     }
   };
 
+  const handleJobCreated = (job: any) => {
+    // Handle new job creation - could update state or show notification
+    Alert.alert('Job Created', `New job scheduled: ${job.title}`);
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'home':
@@ -334,39 +341,20 @@ export default function Index() {
 
       case 'camera':
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Camera Gauge Reader</Text>
-            <Pressable
-              style={styles.primaryAction}
-              onPress={() => {
-                console.log('Scan gauge button pressed');
-                setShowCamera(true);
-              }}
-            >
-              <View style={styles.actionIcon}>
-                <Ionicons name="camera" size={28} color="white" />
-              </View>
-              <Text style={styles.primaryActionText}>Scan Gauge</Text>
-              <Text style={styles.primaryActionSubtext}>AI-powered pressure reading</Text>
-            </Pressable>
-          </View>
+          <CameraGaugeReader
+            onGaugeRead={handleGaugeRead}
+            onClose={() => setActiveTab('home')}
+          />
         );
 
       case 'schedule':
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Scheduling & Dispatch</Text>
-            <Pressable
-              style={styles.primaryAction}
-              onPress={() => setShowScheduling(true)}
-            >
-              <View style={styles.actionIcon}>
-                <Ionicons name="calendar" size={28} color="white" />
-              </View>
-              <Text style={styles.primaryActionText}>Open Schedule</Text>
-              <Text style={styles.primaryActionSubtext}>Manage inspections and jobs</Text>
-            </Pressable>
-          </View>
+          <SchedulingComponent
+            isVisible={true}
+            onClose={() => setActiveTab('home')}
+            onJobCreated={handleJobCreated}
+            useModal={false}
+          />
         );
 
       case 'clients':

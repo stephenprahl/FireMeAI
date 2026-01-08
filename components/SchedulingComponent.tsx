@@ -7,9 +7,10 @@ interface SchedulingComponentProps {
   isVisible: boolean;
   onClose: () => void;
   onJobCreated?: (job: Job) => void;
+  useModal?: boolean; // New prop to control modal usage
 }
 
-export default function SchedulingComponent({ isVisible, onClose, onJobCreated }: SchedulingComponentProps) {
+export default function SchedulingComponent({ isVisible, onClose, onJobCreated, useModal = true }: SchedulingComponentProps) {
   const [schedulingService] = useState(() => new SchedulingService());
   const [jobs, setJobs] = useState<Job[]>([]);
   const [upcomingJobs, setUpcomingJobs] = useState<Job[]>([]);
@@ -110,293 +111,165 @@ export default function SchedulingComponent({ isVisible, onClose, onJobCreated }
     });
   };
 
-  return (
-    <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet">
-      <View style={styles.container}>
-        {/* Professional Header */}
-        <View style={styles.professionalHeader}>
-          <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
-              <TouchableOpacity onPress={onClose} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={24} color="#1a365d" />
-              </TouchableOpacity>
-              <View style={styles.headerText}>
-                <Text style={styles.headerTitle}>Scheduling & Dispatch</Text>
-                <Text style={styles.headerSubtitle}>Manage inspections and jobs</Text>
+  const renderContent = () => (
+    <View style={styles.container}>
+      {/* Professional Header */}
+      <View style={styles.professionalHeader}>
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={onClose} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#1a365d" />
+            </TouchableOpacity>
+            <View style={styles.headerText}>
+              <Text style={styles.headerTitle}>Scheduling & Dispatch</Text>
+              <Text style={styles.headerSubtitle}>Manage inspections and jobs</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.addButton} onPress={() => setShowVoiceInput(true)}>
+            <Ionicons name="add" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView style={styles.content}>
+        {/* Dashboard Overview */}
+        <View style={styles.dashboardSection}>
+          <Text style={styles.sectionTitle}>Today's Overview</Text>
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricCard}>
+              <View style={styles.metricIcon}>
+                <Ionicons name="calendar" size={24} color="#2563eb" />
+              </View>
+              <View style={styles.metricContent}>
+                <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'scheduled').length}</Text>
+                <Text style={styles.metricLabel}>Scheduled</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={() => setShowVoiceInput(true)}>
-              <Ionicons name="add" size={20} color="white" />
-            </TouchableOpacity>
+            <View style={styles.metricCard}>
+              <View style={styles.metricIcon}>
+                <Ionicons name="checkmark-circle" size={24} color="#059669" />
+              </View>
+              <View style={styles.metricContent}>
+                <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'completed').length}</Text>
+                <Text style={styles.metricLabel}>Completed</Text>
+              </View>
+            </View>
+            <View style={styles.metricCard}>
+              <View style={styles.metricIcon}>
+                <Ionicons name="time" size={24} color="#f59e42" />
+              </View>
+              <View style={styles.metricContent}>
+                <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'in_progress').length}</Text>
+                <Text style={styles.metricLabel}>In Progress</Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        <ScrollView style={styles.content}>
-          {/* Dashboard Overview */}
-          <View style={styles.dashboardSection}>
-            <Text style={styles.sectionTitle}>Today's Overview</Text>
-            <View style={styles.metricsGrid}>
-              <View style={styles.metricCard}>
-                <View style={styles.metricIcon}>
-                  <Ionicons name="calendar" size={24} color="#2563eb" />
-                </View>
-                <View style={styles.metricContent}>
-                  <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'scheduled').length}</Text>
-                  <Text style={styles.metricLabel}>Scheduled Today</Text>
-                </View>
-              </View>
-
-              <View style={styles.metricCard}>
-                <View style={styles.metricIcon}>
-                  <Ionicons name="checkmark-circle" size={24} color="#059669" />
-                </View>
-                <View style={styles.metricContent}>
-                  <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'completed').length}</Text>
-                  <Text style={styles.metricLabel}>Completed</Text>
-                </View>
-              </View>
-
-              <View style={styles.metricCard}>
-                <View style={styles.metricIcon}>
-                  <Ionicons name="time" size={24} color="#d97706" />
-                </View>
-                <View style={styles.metricContent}>
-                  <Text style={styles.metricValue}>{jobs.filter(j => j.status === 'in_progress').length}</Text>
-                  <Text style={styles.metricLabel}>In Progress</Text>
-                </View>
-              </View>
-
-              <View style={styles.metricCard}>
-                <View style={styles.metricIcon}>
-                  <Ionicons name="alert-circle" size={24} color="#dc2626" />
-                </View>
-                <View style={styles.metricContent}>
-                  <Text style={styles.metricValue}>{jobs.filter(j => j.priority === 'emergency').length}</Text>
-                  <Text style={styles.metricLabel}>Urgent</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.actionGrid}>
-              <TouchableOpacity
-                style={styles.primaryAction}
-                onPress={() => setShowVoiceInput(true)}
-              >
-                <View style={styles.actionIcon}>
-                  <Ionicons name="mic" size={28} color="white" />
-                </View>
-                <Text style={styles.primaryActionText}>Create Job</Text>
-                <Text style={styles.primaryActionSubtext}>Voice-guided job creation</Text>
-              </TouchableOpacity>
-
-              <View style={styles.secondaryActions}>
-                <TouchableOpacity style={styles.secondaryAction}>
-                  <Ionicons name="calendar" size={20} color="#1a365d" />
-                  <Text style={styles.secondaryActionText}>Schedule</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.secondaryAction}>
-                  <Ionicons name="map" size={20} color="#1a365d" />
-                  <Text style={styles.secondaryActionText}>Routes</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.secondaryAction}>
-                  <Ionicons name="people" size={20} color="#1a365d" />
-                  <Text style={styles.secondaryActionText}>Teams</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.secondaryAction}>
-                  <Ionicons name="stats-chart" size={20} color="#1a365d" />
-                  <Text style={styles.secondaryActionText}>Reports</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          {/* Jobs List */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Today's Jobs</Text>
-              <TouchableOpacity style={styles.filterButton}>
-                <Ionicons name="filter" size={16} color="#64748b" />
-                <Text style={styles.filterText}>Filter</Text>
-              </TouchableOpacity>
-            </View>
-
-            {jobs.length > 0 ? (
-              <View style={styles.jobsList}>
-                {jobs.map((job) => (
-                  <View key={job.id} style={styles.jobCard}>
-                    <View style={styles.jobHeader}>
-                      <View style={styles.jobInfo}>
-                        <Text style={styles.jobTitle}>{job.title}</Text>
-                        <Text style={styles.jobClient}>{job.clientName}</Text>
-                      </View>
-                      <View style={[
-                        styles.priorityBadge,
-                        job.priority === 'emergency' ? styles.priorityUrgent :
-                          job.priority === 'high' ? styles.priorityHigh :
-                            styles.priorityNormal
-                      ]}>
-                        <Text style={styles.priorityText}>
-                          {job.priority?.toUpperCase() || 'NORMAL'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.jobDetails}>
-                      <View style={styles.jobDetail}>
-                        <Ionicons name="location" size={16} color="#64748b" />
-                        <Text style={styles.jobAddress}>{job.location}</Text>
-                      </View>
-                      <View style={styles.jobDetail}>
-                        <Ionicons name="time" size={16} color="#64748b" />
-                        <Text style={styles.jobTime}>
-                          {new Date(job.scheduledDate).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.jobActions}>
-                      <TouchableOpacity style={styles.jobAction}>
-                        <Ionicons name="call" size={16} color="#2563eb" />
-                        <Text style={styles.jobActionText}>Call</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.jobAction}>
-                        <Ionicons name="navigate" size={16} color="#2563eb" />
-                        <Text style={styles.jobActionText}>Navigate</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[
-                        styles.jobAction,
-                        styles.jobActionPrimary
-                      ]}>
-                        <Text style={styles.jobActionPrimaryText}>Start Job</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="calendar" size={48} color="#cbd5e1" />
-                <Text style={styles.emptyTitle}>No jobs scheduled</Text>
-                <Text style={styles.emptySubtitle}>Create a new job to get started</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Voice Input Modal */}
-          {showVoiceInput && (
-            <View style={styles.voiceInputContainer}>
-              <Text style={styles.voiceInputTitle}>Describe the job:</Text>
-              <Text style={styles.voiceInputExample}>
-                "Emergency repair at 123 Main St for ABC Corporation. Sprinkler system leaking valve. Priority emergency."
-              </Text>
-              <TextInput
-                style={styles.voiceInputField}
-                value={voiceInput}
-                onChangeText={setVoiceInput}
-                placeholder="Type or paste voice transcription here..."
-                multiline
-              />
-              <View style={styles.voiceInputActions}>
-                <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
-                  onPress={() => {
-                    setShowVoiceInput(false);
-                    setVoiceInput('');
-                  }}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.button, styles.createButton]}
-                  onPress={handleCreateJobFromVoice}
-                >
-                  <Text style={styles.createButtonText}>Create Job</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Upcoming Jobs */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Upcoming Jobs (Next 7 Days)</Text>
-            {upcomingJobs.length === 0 ? (
-              <Text style={styles.emptyText}>No upcoming jobs scheduled</Text>
-            ) : (
-              upcomingJobs.map(job => (
-                <View key={job.id} style={styles.jobCard}>
-                  <View style={styles.jobHeader}>
-                    <Text style={styles.jobTitle}>{job.title}</Text>
-                    <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(job.priority) }]}>
-                      <Text style={styles.priorityText}>{job.priority.toUpperCase()}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.jobLocation}>{job.location}</Text>
-                  <Text style={styles.jobClient}>{job.clientName}</Text>
-                  <View style={styles.jobDetails}>
-                    <Text style={styles.jobDetail}>
-                      <Ionicons name="calendar" size={14} color="#666" />
-                      {job.scheduledDate.toLocaleDateString()} at {formatJobTime(job.scheduledDate)}
-                    </Text>
-                    <Text style={styles.jobDetail}>
-                      <Ionicons name="person" size={14} color="#666" />
-                      {job.technician}
-                    </Text>
-                    <Text style={styles.jobDetail}>
-                      <Ionicons name="time" size={14} color="#666" />
-                      {job.estimatedDuration} hours
-                    </Text>
-                  </View>
+        {/* Upcoming Jobs */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Upcoming Jobs</Text>
+          {upcomingJobs.length > 0 ? (
+            upcomingJobs.slice(0, 5).map((job) => (
+              <View key={job.id} style={styles.jobCard}>
+                <View style={styles.jobHeader}>
+                  <Text style={styles.jobTitle}>{job.title}</Text>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(job.status) }]}>
                     <Text style={styles.statusText}>{job.status.replace('_', ' ').toUpperCase()}</Text>
                   </View>
                 </View>
-              ))
-            )}
-          </View>
+                <Text style={styles.jobLocation}>{job.location}</Text>
+                <Text style={styles.jobClient}>{job.clientName}</Text>
+                <View style={styles.jobDetails}>
+                  <Text style={styles.jobDetail}>
+                    <Ionicons name="calendar" size={14} color="#666" />
+                    {job.scheduledDate.toLocaleDateString()} at {formatJobTime(job.scheduledDate)}
+                  </Text>
+                  <Text style={styles.jobDetail}>
+                    <Ionicons name="person" size={14} color="#666" />
+                    {job.technician}
+                  </Text>
+                  <Text style={styles.jobDetail}>
+                    <Ionicons name="time" size={14} color="#666" />
+                    {job.estimatedDuration} hours
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No upcoming jobs scheduled</Text>
+          )}
+        </View>
 
-          {/* Daily Schedule */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Schedule for {selectedDate.toLocaleDateString()}</Text>
-              <TouchableOpacity onPress={() => {
-                const newDate = new Date(selectedDate);
-                newDate.setDate(newDate.getDate() + 1);
-                setSelectedDate(newDate);
-              }}>
-                <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+        {/* Daily Schedule */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Schedule for {selectedDate.toLocaleDateString()}</Text>
+          {dailySchedule.length > 0 ? (
+            dailySchedule.map((techSchedule, index) => (
+              <View key={index} style={styles.technicianSchedule}>
+                <Text style={styles.technicianName}>{techSchedule.technician}</Text>
+                {techSchedule.jobs.map((job) => (
+                  <View key={job.id} style={styles.jobItem}>
+                    <View style={styles.jobInfo}>
+                      <Text style={styles.jobTitle}>{job.title}</Text>
+                      <Text style={styles.jobClient}>{job.clientName}</Text>
+                    </View>
+                    <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(job.priority) }]}>
+                      <Text style={styles.priorityText}>{job.priority.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No jobs scheduled for this date</Text>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Voice Input Modal */}
+      <Modal visible={showVoiceInput} animationType="slide" transparent={true}>
+        <View style={styles.voiceModalOverlay}>
+          <View style={styles.voiceModalContent}>
+            <Text style={styles.voiceModalTitle}>Create New Job</Text>
+            <Text style={styles.voiceModalSubtitle}>Describe the job details</Text>
+            <TextInput
+              style={styles.voiceInput}
+              value={voiceInput}
+              onChangeText={setVoiceInput}
+              placeholder="e.g., Schedule sprinkler inspection at 123 Main St for tomorrow at 2 PM"
+              multiline
+              numberOfLines={4}
+            />
+            <View style={styles.voiceModalActions}>
+              <TouchableOpacity
+                style={styles.voiceCancelButton}
+                onPress={() => {
+                  setShowVoiceInput(false);
+                  setVoiceInput('');
+                }}
+              >
+                <Text style={styles.voiceCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.voiceCreateButton}
+                onPress={handleCreateJobFromVoice}
+              >
+                <Text style={styles.voiceCreateText}>Create Job</Text>
               </TouchableOpacity>
             </View>
-            {dailySchedule.map(({ technician, jobs }) => (
-              <View key={technician} style={styles.technicianSchedule}>
-                <Text style={styles.technicianName}>{technician}</Text>
-                {jobs.length === 0 ? (
-                  <Text style={styles.noJobs}>No jobs scheduled</Text>
-                ) : (
-                  jobs.map(job => (
-                    <View key={job.id} style={styles.scheduleJob}>
-                      <Text style={styles.scheduleJobTime}>
-                        {formatJobTime(job.scheduledDate)} - {job.title}
-                      </Text>
-                      <Text style={styles.scheduleJobLocation}>{job.location}</Text>
-                    </View>
-                  ))
-                )}
-              </View>
-            ))}
           </View>
-        </ScrollView>
-      </View>
+        </View>
+      </Modal>
+    </View>
+  );
+
+  return useModal ? (
+    <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet">
+      {renderContent()}
     </Modal>
+  ) : (
+    renderContent()
   );
 }
 
@@ -869,5 +742,82 @@ const styles = StyleSheet.create({
   scheduleJobLocation: {
     fontSize: 12,
     color: '#64748b',
+  },
+  // Missing styles for voice modal
+  jobItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  voiceModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  voiceModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  voiceModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  voiceModalSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  voiceInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  voiceModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  voiceCancelButton: {
+    flex: 1,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  voiceCancelText: {
+    color: '#64748b',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  voiceCreateButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  voiceCreateText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
